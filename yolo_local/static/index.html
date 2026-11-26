@@ -1574,7 +1574,6 @@
         interactiveStream = await navigator.mediaDevices.getUserMedia({
           audio: {
             channelCount: 1,
-            sampleRate: 16000,
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
@@ -1587,7 +1586,7 @@
           : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
 
         interactiveRecorder = mimeType
-          ? new MediaRecorder(interactiveStream, { mimeType, audioBitsPerSecond: 128000 })
+          ? new MediaRecorder(interactiveStream, { mimeType, audioBitsPerSecond: 192000 })
           : new MediaRecorder(interactiveStream);
 
         interactiveRecorder.ondataavailable = (e) => {
@@ -1606,7 +1605,7 @@
 
         let speechDetected = false;
         let silenceStart = null;
-        const silenceTimeoutMs = 1000; // 1.0s silence threshold after speech
+        const silenceTimeoutMs = 1200; // 1.2s silence threshold after speech
         const startTime = Date.now();
 
         vadTimer = setInterval(() => {

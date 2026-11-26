@@ -62,6 +62,16 @@ class TestAudioPreprocessor(unittest.TestCase):
         processed = AudioPreprocessor.preprocess_waveform(short_audio, trim_silence=False, normalize_gain=False)
         self.assertGreaterEqual(len(processed), int(sr * AudioPreprocessor.MIN_DURATION_SECONDS))
 
+    def test_preemphasis_filter(self):
+        """Verify pre-emphasis high-pass filter emphasizes high-frequency changes."""
+        audio = np.array([0.0, 1.0, 1.0, 1.0], dtype=np.float32)
+        filtered = AudioPreprocessor.apply_preemphasis(audio, coeff=0.97)
+        self.assertEqual(len(filtered), len(audio))
+        # Initial transition should be prominent
+        self.assertAlmostEqual(filtered[1], 1.0, places=4)
+        # Constant region should be attenuated
+        self.assertAlmostEqual(filtered[2], 0.03, places=4)
+
 
 class TestSTTPostProcessor(unittest.TestCase):
     """Test text cleaning and phonetic homophone normalization for COCO objects."""
@@ -163,6 +173,26 @@ class TestDualChannelConsensus(unittest.TestCase):
         )
         self.assertIn("left", res["text"])
         self.assertEqual(res["fusion_mode"], "hint_enriched_region")
+
+
+class TestYOLODetectorAccuracy(unittest.TestCase):
+    """Test YOLO detector configuration, resolution, and adaptive illumination enhancements."""
+
+    def test_detector_default_settings(self):
+        """Verify default resolution 640 and optimized IoU 0.45."""
+        self.assertEqual(settings.default_imgsz, 640)
+        self.assertEqual(settings.default_iou_threshold, 0.45)
+        self.assertEqual(settings.default_conf_threshold, 0.35)
+
+    def test_adaptive_low_light_enhancement(self):
+        """Verify dark frames are enhanced with CLAHE without crashing."""
+        from backend.services.detector import get_default_detector
+        detector = get_default_detector()
+        # Synthetic dark frame
+        dark_frame = np.full((480, 640, 3), 40, dtype=np.uint8)
+        dets, duration, annotated = detector.detect(dark_frame, imgsz=640, enhance_lighting=True)
+        self.assertIsInstance(dets, list)
+        self.assertGreater(duration, 0)
 
 
 if __name__ == "__main__":

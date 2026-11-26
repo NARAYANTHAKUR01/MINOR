@@ -43,12 +43,23 @@ class AudioPreprocessor:
     PADDING_DURATION_SECONDS: float = 0.08
 
     @classmethod
+    def apply_preemphasis(cls, audio: np.ndarray, coeff: float = 0.97) -> np.ndarray:
+        """
+        Applies a first-order high-pass filter: y[n] = x[n] - coeff * x[n-1].
+        Amplifies high-frequency formant energy, improving recognition of English consonants.
+        """
+        if audio is None or len(audio) < 2:
+            return audio
+        return np.append(audio[0], audio[1:] - coeff * audio[:-1]).astype(np.float32)
+
+    @classmethod
     def preprocess_waveform(
         cls,
         audio: np.ndarray,
         sr: int = 16000,
         trim_silence: bool = True,
         normalize_gain: bool = True,
+        apply_preemphasis: bool = False,
     ) -> np.ndarray:
         if audio is None or len(audio) == 0:
             return np.zeros(0, dtype=np.float32)
@@ -99,7 +110,14 @@ class AudioPreprocessor:
             if peak > 1e-5:
                 audio = (audio / peak) * cls.TARGET_PEAK
 
-        # 4. Minimum Duration Safeguard
+        # 4. Optional Pre-emphasis filter for high-frequency acoustic clarity
+        if apply_preemphasis and len(audio) >= 2:
+            audio = cls.apply_preemphasis(audio, coeff=0.97)
+            new_peak = float(np.max(np.abs(audio)))
+            if new_peak > 1e-5:
+                audio = (audio / new_peak) * cls.TARGET_PEAK
+
+        # 5. Minimum Duration Safeguard
         min_samples = int(sr * cls.MIN_DURATION_SECONDS)
         if len(audio) < min_samples:
             pad_needed = min_samples - len(audio)
@@ -326,11 +344,23 @@ class WhisperSTTService(BaseSTTService):
                     self.device,
                     self.download_root,
                 )
-                self._model = whisper.load_model(
-                    self.model_size,
-                    device=self.device,
-                    download_root=str(self.download_root),
-                )
+                try:
+                    self._model = whisper.load_model(
+                        self.model_size,
+                        device=self.device,
+                        download_root=str(self.download_root),
+                    )
+                except Exception as inner_exc:
+                    if self.model_size != "base":
+                        logger.warning("Failed loading '%s' (%s), falling back to 'base'", self.model_size, inner_exc)
+                        self.model_size = "base"
+                        self._model = whisper.load_model(
+                            "base",
+                            device=self.device,
+                            download_root=str(self.download_root),
+                        )
+                    else:
+                        raise inner_exc
                 self._initialized = True
                 logger.info("Local Whisper model '%s' loaded successfully.", self.model_size)
                 return self._model
@@ -408,6 +438,7 @@ class WhisperSTTService(BaseSTTService):
                     waveform,
                     trim_silence=getattr(settings, "whisper_trim_silence", True),
                     normalize_gain=getattr(settings, "whisper_normalize_gain", True),
+                    apply_preemphasis=getattr(settings, "whisper_apply_preemphasis", False),
                 )
             result = model.transcribe(waveform, **kwargs)
             raw_text = result.get("text", "").strip()
@@ -453,6 +484,7 @@ class WhisperSTTService(BaseSTTService):
                         waveform,
                         trim_silence=getattr(settings, "whisper_trim_silence", True),
                         normalize_gain=getattr(settings, "whisper_normalize_gain", True),
+                        apply_preemphasis=getattr(settings, "whisper_apply_preemphasis", False),
                     )
                 result = model.transcribe(waveform, **kwargs)
                 raw_text = result.get("text", "").strip()

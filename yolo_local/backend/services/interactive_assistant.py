@@ -231,13 +231,14 @@ class InteractiveAssistant:
                 time.sleep(0.04)
                 continue
 
-            # Run YOLO detector exclusively for target class ID
+            # Run YOLO detector exclusively for target class ID with high-resolution and optimized recall
             frame_h, frame_w = frame.shape[:2]
             detections, _, _ = self.detector.detect(
                 frame,
                 classes=[target_id],
                 target_ids={target_id},
-                conf_threshold=0.35,
+                conf_threshold=0.28,
+                imgsz=640,
                 annotate=False,
             )
 

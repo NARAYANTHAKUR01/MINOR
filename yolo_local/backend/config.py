@@ -21,7 +21,9 @@ class Settings(BaseModel):
     # Model settings
     default_model_name: str = "yolo11m.pt"
     default_model_path: Path = BASE_DIR / "models" / "yolo11m.pt"
-    default_conf_threshold: float = 0.4
+    default_conf_threshold: float = 0.35
+    default_imgsz: int = 640
+    default_iou_threshold: float = 0.45
     weights_download_url: str = (
         "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11m.pt"
     )
@@ -51,6 +53,7 @@ class Settings(BaseModel):
     whisper_preprocess_audio: bool = True
     whisper_normalize_gain: bool = True
     whisper_trim_silence: bool = True
+    whisper_apply_preemphasis: bool = True
     whisper_initial_prompt: str = (
         "Hii, please find the bottle, cup, laptop, cell phone, chair, couch, "
         "dining table, microwave, oven, refrigerator, remote, hair drier, backpack, "

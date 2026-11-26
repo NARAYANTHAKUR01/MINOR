@@ -1,5 +1,6 @@
 import time
 from pathlib import Path
+import cv2
 import numpy as np
 import torch
 
@@ -10,7 +11,7 @@ from backend.services.visualizer import Visualizer
 
 
 class ObjectDetector:
-    """Wrapper around YOLO11m providing structured detection results."""
+    """Wrapper around YOLO11m providing structured detection results with high accuracy."""
 
     def __init__(self, weights_path: Path | None = None, device_preference: str = "auto"):
         self.weights_path = weights_path or settings.default_model_path
@@ -20,14 +21,17 @@ class ObjectDetector:
     def detect(
         self,
         frame: np.ndarray,
-        conf_threshold: float = 0.4,
+        conf_threshold: float = 0.35,
         annotate: bool = False,
-        imgsz: int = 512,
+        imgsz: int = 640,
         classes: list[int] | None = None,
         target_ids: set[int] | list[int] | None = None,
+        iou_threshold: float = 0.45,
+        augment: bool = False,
+        enhance_lighting: bool = True,
     ) -> tuple[list[DetectionItem], float, np.ndarray | None]:
         """
-        Run inference on an image/frame.
+        Run inference on an image/frame with optimized resolution and NMS.
         If classes or target_ids are specified, filters ONLY for target objects.
 
         Returns:
@@ -35,14 +39,33 @@ class ObjectDetector:
             - Inference duration in milliseconds
             - Annotated image if annotate=True, otherwise None
         """
+        # Adaptive lighting enhancement for dim or shadowed camera frames
+        processed_frame = frame
+        if enhance_lighting and frame is not None and frame.size > 0:
+            try:
+                if frame.ndim == 3 and frame.shape[2] == 3:
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    if float(np.mean(gray)) < 65:
+                        lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+                        l_chan, a_chan, b_chan = cv2.split(lab)
+                        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                        l_enh = clahe.apply(l_chan)
+                        processed_frame = cv2.cvtColor(cv2.merge((l_enh, a_chan, b_chan)), cv2.COLOR_LAB2BGR)
+            except Exception:
+                processed_frame = frame
+
         start = time.perf_counter()
         predict_kwargs = {
-            "source": frame,
+            "source": processed_frame,
             "conf": conf_threshold,
+            "iou": iou_threshold,
             "imgsz": imgsz,
             "device": self.device,
             "verbose": False,
+            "max_det": 100,
         }
+        if augment:
+            predict_kwargs["augment"] = True
         if classes is not None:
             predict_kwargs["classes"] = classes
 
