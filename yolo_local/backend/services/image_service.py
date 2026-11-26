@@ -6,6 +6,7 @@ import numpy as np
 from backend.config import settings
 from backend.schemas.detection import DetectionResultResponse
 from backend.services.detector import ObjectDetector, get_default_detector
+from backend.services.spatial_reasoner import RelativeSpatialResult, SpatialReasoner
 from backend.services.visualizer import Visualizer
 
 
@@ -132,3 +133,57 @@ class ImageService:
         )
 
         return response, annotated, saved_path
+
+    def process_image_spatial_reasoning(
+        self,
+        image_path: Path,
+        target_class: str,
+        conf_threshold: float = 0.35,
+        tolerance_x: float = 25.0,
+        tolerance_y: float = 25.0,
+        save_output: bool = True,
+        output_dir: Path | None = None,
+    ) -> tuple[RelativeSpatialResult, np.ndarray, Path | None]:
+        """
+        Runs anchor-based spatial reasoning on an image:
+        1. Detects all objects in the image.
+        2. Identifies target object(s) and selects closest reference/anchor object.
+        3. Determines relative direction (left, right, above, below).
+        4. Generates natural language feedback and visual overlay.
+        """
+        target_dir = output_dir or settings.outputs_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
+
+        img = cv2.imread(str(image_path))
+        if img is None:
+            raise ValueError(f"Could not decode image at: {image_path}")
+
+        # Detect all objects in the frame
+        detections, _, _ = self.detector.detect(
+            img,
+            conf_threshold=conf_threshold,
+            annotate=False,
+        )
+
+        # Run spatial reasoning
+        spatial_res = SpatialReasoner.analyze_relative_spatial_relations(
+            target_class=target_class,
+            detections=detections,
+            frame_shape=img.shape[:2],
+            tolerance_x=tolerance_x,
+            tolerance_y=tolerance_y,
+        )
+
+        # Draw overlay showing target, anchor, connecting vector, and description
+        annotated = Visualizer.draw_spatial_relation_overlay(img, spatial_res)
+
+        saved_path = None
+        if save_output:
+            out_filename = f"spatial_{target_class.replace(' ', '_')}_{image_path.name}"
+            saved_path = target_dir / out_filename
+            cv2.imwrite(str(saved_path), annotated)
+
+        return spatial_res, annotated, saved_path

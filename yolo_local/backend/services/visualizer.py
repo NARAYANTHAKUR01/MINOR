@@ -1,3 +1,4 @@
+from typing import Any
 import cv2
 import numpy as np
 
@@ -270,4 +271,78 @@ class Visualizer:
             font_thickness,
             cv2.LINE_AA,
         )
+        return annotated
+
+    @classmethod
+    def draw_spatial_relation_overlay(
+        cls,
+        frame: np.ndarray,
+        spatial_result: Any,
+    ) -> np.ndarray:
+        """
+        Draws high-visibility visualization for anchor-based spatial reasoning:
+          - Target bounding box & reticle (bright emerald)
+          - Anchor bounding box & reticle (amber / gold)
+          - Connecting vector between centroids
+          - Top HUD banner showing natural-language spatial description
+        """
+        annotated = frame.copy()
+        font = cv2.FONT_HERSHEY_SIMPLEX
+
+        # 1. Draw Target(s)
+        if spatial_result.primary_target:
+            t = spatial_result.primary_target
+            tx1, ty1 = int(t.bbox.x1), int(t.bbox.y1)
+            tx2, ty2 = int(t.bbox.x2), int(t.bbox.y2)
+            t_color = (0, 255, 128)  # Neon Emerald
+
+            cv2.rectangle(annotated, (tx1, ty1), (tx2, ty2), t_color, 2)
+            cls.draw_corner_brackets(annotated, tx1, ty1, tx2, ty2, color=t_color, length=18, thickness=3)
+
+            t_label = f"TARGET: {t.class_name.upper()} ({int(t.confidence * 100)}%)"
+            (lw, lh), _ = cv2.getTextSize(t_label, font, 0.48, 1)
+            cv2.rectangle(annotated, (tx1, max(0, ty1 - 22)), (tx1 + lw + 12, max(0, ty1)), (15, 23, 42), -1)
+            cv2.putText(annotated, t_label, (tx1 + 6, max(0, ty1 - 7)), font, 0.48, t_color, 1, cv2.LINE_AA)
+
+            # Draw target centroid dot
+            if spatial_result.target_centroid:
+                tcx, tcy = int(spatial_result.target_centroid[0]), int(spatial_result.target_centroid[1])
+                cv2.circle(annotated, (tcx, tcy), 5, t_color, -1)
+                cv2.circle(annotated, (tcx, tcy), 8, (255, 255, 255), 1)
+
+        # 2. Draw Anchor (if selected)
+        if spatial_result.anchor:
+            a = spatial_result.anchor
+            ax1, ay1 = int(a.bbox.x1), int(a.bbox.y1)
+            ax2, ay2 = int(a.bbox.x2), int(a.bbox.y2)
+            a_color = (0, 191, 255)  # Amber / Gold
+
+            cv2.rectangle(annotated, (ax1, ay1), (ax2, ay2), a_color, 2)
+            cls.draw_corner_brackets(annotated, ax1, ay1, ax2, ay2, color=a_color, length=18, thickness=3)
+
+            a_label = f"ANCHOR: {a.class_name.upper()} ({int(a.confidence * 100)}%)"
+            (lw, lh), _ = cv2.getTextSize(a_label, font, 0.48, 1)
+            cv2.rectangle(annotated, (ax1, max(0, ay1 - 22)), (ax1 + lw + 12, max(0, ay1)), (15, 23, 42), -1)
+            cv2.putText(annotated, a_label, (ax1 + 6, max(0, ay1 - 7)), font, 0.48, a_color, 1, cv2.LINE_AA)
+
+            # Draw anchor centroid dot
+            if spatial_result.anchor_centroid:
+                acx, acy = int(spatial_result.anchor_centroid[0]), int(spatial_result.anchor_centroid[1])
+                cv2.circle(annotated, (acx, acy), 5, a_color, -1)
+                cv2.circle(annotated, (acx, acy), 8, (255, 255, 255), 1)
+
+                # Draw connecting line between centroids
+                if spatial_result.target_centroid:
+                    tcx, tcy = int(spatial_result.target_centroid[0]), int(spatial_result.target_centroid[1])
+                    cv2.line(annotated, (tcx, tcy), (acx, acy), (255, 255, 255), 1, cv2.LINE_AA)
+
+        # 3. Draw Top HUD Banner with Description
+        desc_text = spatial_result.description
+        (dw, dh), _ = cv2.getTextSize(desc_text, font, 0.52, 1)
+        banner_w = max(dw + 28, 300)
+        cv2.rectangle(annotated, (12, 12), (12 + banner_w, 12 + dh + 16), (15, 23, 42), -1)
+        border_col = (0, 255, 128) if spatial_result.target_found else (239, 68, 68)
+        cv2.rectangle(annotated, (12, 12), (12 + banner_w, 12 + dh + 16), border_col, 1)
+        cv2.putText(annotated, desc_text, (22, 12 + dh + 5), font, 0.52, (255, 255, 255), 1, cv2.LINE_AA)
+
         return annotated

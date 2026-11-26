@@ -38,3 +38,6 @@ class InteractiveCommandResponse(BaseModel):
     speech_response: str = Field(..., description="Natural language spoken response generated.")
     search_duration_seconds: float = Field(..., description="Seconds spent searching camera frames.")
     detections: list[dict[str, Any]] = Field(default_factory=list, description="Telemetry for detected objects.")
+    anchor_object: str | None = Field(default=None, description="Anchor object class name if selected.")
+    relative_direction: str | None = Field(default=None, description="Spatial relation relative to anchor.")
+    relative_spatial: dict[str, Any] | None = Field(default=None, description="Full anchor spatial reasoning details.")

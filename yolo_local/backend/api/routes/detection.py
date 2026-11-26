@@ -112,3 +112,50 @@ async def detect_video(
     finally:
         if temp_in.exists():
             temp_in.unlink()
+
+
+@router.post("/spatial")
+async def detect_spatial_reasoning(
+    file: UploadFile = File(..., description="Image file to analyze"),
+    target: str = Form(..., description="Target object class name or voice query (e.g. 'bottle' or 'where is the bottle')"),
+    conf: float = Form(0.35, ge=0.01, le=1.0, description="Confidence threshold"),
+    tolerance: float = Form(25.0, ge=1.0, le=200.0, description="Spatial alignment tolerance in pixels"),
+):
+    """
+    Analyzes spatial relationships between the target object and reference/anchor objects in an image.
+    Returns natural language spatial feedback (e.g. 'The bottle is to the left of the chair.').
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Uploaded file must have a filename.")
+
+    # Extract target class from query if given natural sentence
+    from backend.services.nlp_extractor import get_nlp_extractor
+    nlp = get_nlp_extractor()
+    nlp_res = nlp.extract(target)
+    target_class = nlp_res.target_classes[0] if nlp_res.target_classes else target.strip().lower()
+
+    temp_in = settings.outputs_dir / f"upload_spatial_{uuid.uuid4().hex[:8]}_{file.filename}"
+    with open(temp_in, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    try:
+        spatial_res, annotated, saved_path = get_img_service().process_image_spatial_reasoning(
+            image_path=temp_in,
+            target_class=target_class,
+            conf_threshold=conf,
+            tolerance_x=tolerance,
+            tolerance_y=tolerance,
+            save_output=True,
+        )
+        return {
+            "success": True,
+            "target_class": target_class,
+            "description": spatial_res.description,
+            "spatial_result": spatial_res.to_dict(),
+            "annotated_image_url": f"/outputs/{saved_path.name}" if saved_path else None,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Spatial reasoning failed: {exc}")
+    finally:
+        if temp_in.exists():
+            temp_in.unlink()

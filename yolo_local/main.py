@@ -31,6 +31,8 @@ def run_image(
     show_preview: bool,
     target_ids: set[int] | None = None,
     target_names: list[str] | None = None,
+    spatial: bool = False,
+    tolerance: float = 25.0,
 ):
     img_path = Path(path)
     if not img_path.is_absolute():
@@ -39,6 +41,42 @@ def run_image(
     if not img_path.exists():
         print(f"[ERROR] Image file not found: {img_path}", file=sys.stderr)
         sys.exit(1)
+
+    if spatial and target_names:
+        target_name = target_names[0]
+        print(f"[INFO] Running anchor-based spatial reasoning for target '{target_name}' on '{img_path.name}'...")
+        spatial_res, annotated, saved_path = image_service.process_image_spatial_reasoning(
+            image_path=img_path,
+            target_class=target_name,
+            conf_threshold=conf,
+            tolerance_x=tolerance,
+            tolerance_y=tolerance,
+            save_output=True,
+            output_dir=output_dir,
+        )
+        print(f"\n[SPATIAL FEEDBACK] \"{spatial_res.description}\"")
+        if spatial_res.anchor:
+            print(f"  • Reference Anchor: {spatial_res.anchor.class_name} (conf: {spatial_res.anchor.confidence:.2f})")
+            print(f"  • Relative Vector:  {spatial_res.direction}")
+            print(f"  • Distance:         {spatial_res.distance_pixels} px")
+        print(f"[SUCCESS] Saved annotated spatial image to: {saved_path.resolve() if saved_path else 'None'}")
+
+        # Speak result using TTS
+        try:
+            subprocess.run(["say", spatial_res.description], check=False)
+        except Exception:
+            pass
+
+        if show_preview and annotated is not None:
+            try:
+                window_name = f"Spatial Reasoning - {img_path.name} (Press any key to close)"
+                cv2.imshow(window_name, annotated)
+                print("[INFO] Showing spatial reasoning window. Press any key to exit.")
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+            except Exception as exc:
+                print(f"[WARNING] Could not open preview window ({exc}).")
+        return
 
     if target_ids is not None:
         print(f"[INFO] Running target localization for {target_names} (IDs: {list(target_ids)}) on '{img_path.name}'...")
@@ -241,6 +279,17 @@ def main():
         action="store_true",
         help="Disable interactive GUI preview windows (useful for headless/automated runs)",
     )
+    parser.add_argument(
+        "--spatial",
+        action="store_true",
+        help="Run anchor-based relative spatial reasoning (e.g. 'bottle is left of chair')",
+    )
+    parser.add_argument(
+        "--tolerance",
+        type=float,
+        default=25.0,
+        help="Coordinate tolerance in pixels for horizontal/vertical alignment (default: 25.0)",
+    )
 
     args = parser.parse_args()
 
@@ -294,7 +343,17 @@ def main():
 
     # 4. Dispatch mode
     if args.source == "image":
-        run_image(image_service, args.path, args.conf, output_dir, show_preview, target_ids=target_ids, target_names=target_names)
+        run_image(
+            image_service,
+            args.path,
+            args.conf,
+            output_dir,
+            show_preview,
+            target_ids=target_ids,
+            target_names=target_names,
+            spatial=args.spatial,
+            tolerance=args.tolerance,
+        )
     elif args.source == "video":
         run_video(video_service, args.path, args.conf, output_dir, show_preview, target_ids=target_ids, target_names=target_names)
     elif args.source == "webcam":

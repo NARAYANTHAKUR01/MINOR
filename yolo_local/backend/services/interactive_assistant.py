@@ -250,6 +250,18 @@ class InteractiveAssistant:
 
                     # Case A: No specific region requested by user -> immediate hit!
                     if not requested_region:
+                        # Attempt to find anchor object in the same frame
+                        rel_spatial = None
+                        try:
+                            rel_spatial = SpatialReasoner.locate_target_relative_to_anchor(
+                                target_class=target_name,
+                                frame=frame,
+                                detector=self.detector,
+                                conf_threshold=0.30,
+                            )
+                        except Exception:
+                            rel_spatial = None
+
                         return {
                             "aborted": False,
                             "found": True,
@@ -259,11 +271,23 @@ class InteractiveAssistant:
                             "detection": det,
                             "detections": [det.model_dump()],
                             "time_taken": round(time.monotonic() - start_time, 2),
+                            "relative_spatial": rel_spatial,
                         }
 
                     # Case B: User requested a specific region
                     if SpatialReasoner.matches_requested_region(detected_region, requested_region):
                         # Matching region found -> exit search immediately!
+                        rel_spatial = None
+                        try:
+                            rel_spatial = SpatialReasoner.locate_target_relative_to_anchor(
+                                target_class=target_name,
+                                frame=frame,
+                                detector=self.detector,
+                                conf_threshold=0.30,
+                            )
+                        except Exception:
+                            rel_spatial = None
+
                         return {
                             "aborted": False,
                             "found": True,
@@ -273,6 +297,7 @@ class InteractiveAssistant:
                             "detection": det,
                             "detections": [det.model_dump()],
                             "time_taken": round(time.monotonic() - start_time, 2),
+                            "relative_spatial": rel_spatial,
                         }
                     else:
                         # Mismatched instance; keep best candidate and continue searching
@@ -424,14 +449,38 @@ class InteractiveAssistant:
 
         # Step: Generating response
         self.set_state(InteractiveState.GENERATING_RESPONSE)
-        speech = SpatialReasoner.generate_location_response(
-            target_object=target_name,
-            found=search_res["found"],
-            detected_region=search_res["detected_region"],
-            requested_region=requested_region,
-            region_matched=search_res["region_matched"],
-            timed_out=not search_res["found"],
-        )
+        rel_spatial = search_res.get("relative_spatial")
+
+        anchor_name = None
+        rel_direction = None
+        rel_dict = None
+
+        if rel_spatial is not None:
+            rel_dict = rel_spatial.to_dict()
+            if rel_spatial.anchor:
+                anchor_name = rel_spatial.anchor.class_name
+                rel_direction = rel_spatial.direction
+                # Use natural language anchor relative description
+                speech = rel_spatial.description
+            else:
+                speech = SpatialReasoner.generate_location_response(
+                    target_object=target_name,
+                    found=search_res["found"],
+                    detected_region=search_res["detected_region"],
+                    requested_region=requested_region,
+                    region_matched=search_res["region_matched"],
+                    timed_out=not search_res["found"],
+                )
+        else:
+            speech = SpatialReasoner.generate_location_response(
+                target_object=target_name,
+                found=search_res["found"],
+                detected_region=search_res["detected_region"],
+                requested_region=requested_region,
+                region_matched=search_res["region_matched"],
+                timed_out=not search_res["found"],
+            )
+
         self.last_response = speech
 
         # Return to waiting state if still active
@@ -454,6 +503,9 @@ class InteractiveAssistant:
             speech_response=speech,
             search_duration_seconds=search_res["time_taken"],
             detections=search_res["detections"],
+            anchor_object=anchor_name,
+            relative_direction=rel_direction,
+            relative_spatial=rel_dict,
         )
 
     def process_audio_command(
