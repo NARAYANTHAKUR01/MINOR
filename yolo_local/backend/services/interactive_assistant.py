@@ -554,23 +554,25 @@ class InteractiveAssistant:
 
         self.set_state(InteractiveState.TRANSCRIBING)
         try:
-            transcribed_text = self.stt.transcribe(audio_bytes).strip()
+            if hasattr(self.stt, "transcribe_with_hint"):
+                fused_result = self.stt.transcribe_with_hint(audio_bytes, hint_text=hint_text)
+                chosen_text = fused_result.get("text", "").strip()
+            else:
+                transcribed_text = self.stt.transcribe(audio_bytes).strip()
+                chosen_text = transcribed_text
+                if hint_text and hint_text.strip():
+                    hint_clean = hint_text.strip()
+                    if not transcribed_text:
+                        chosen_text = hint_clean
+                    else:
+                        extraction_whisper = self.nlp.extract_target_and_intent(transcribed_text)
+                        if not extraction_whisper.get("valid"):
+                            extraction_hint = self.nlp.extract_target_and_intent(hint_clean)
+                            if extraction_hint.get("valid"):
+                                chosen_text = hint_clean
         except Exception as exc:
             print(f"[ERROR] Whisper transcription failed: {exc}")
-            transcribed_text = ""
-
-        # Smart fallback & fusion with client speech recognition if available
-        chosen_text = transcribed_text
-        if hint_text and hint_text.strip():
-            hint_clean = hint_text.strip()
-            if not transcribed_text:
-                chosen_text = hint_clean
-            else:
-                extraction_whisper = self.nlp.extract_target_and_intent(transcribed_text)
-                if not extraction_whisper.get("valid"):
-                    extraction_hint = self.nlp.extract_target_and_intent(hint_clean)
-                    if extraction_hint.get("valid"):
-                        chosen_text = hint_clean
+            chosen_text = (hint_text or "").strip()
 
         return self.process_text_command(
             query_text=chosen_text,

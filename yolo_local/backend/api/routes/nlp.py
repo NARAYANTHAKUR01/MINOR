@@ -40,6 +40,17 @@ def get_stt_status():
     return STTStatusResponse(**status)
 
 
+@router.post("/set-model")
+def set_stt_model(model_name: str = Query("base", description="Whisper model name ('base', 'base.en', 'small', 'tiny')")):
+    """Dynamically switch the local Whisper model size."""
+    stt = get_stt_manager()
+    try:
+        stt.set_model_size(model_name)
+        return {"success": True, "model_name": model_name, "status": stt.get_status()}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to switch STT model: {exc}")
+
+
 @router.post("/transcribe", response_model=TranscribeAudioResponse)
 async def transcribe_audio(
     audio_file: UploadFile = File(..., description="Speech audio file (.wav, .mp3, .m4a, .webm, .ogg)"),

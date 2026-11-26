@@ -41,10 +41,28 @@ class Settings(BaseModel):
     stt_device: str = "cpu"
     whisper_language: str = "en"
     whisper_temperature: float = 0.0
+    whisper_beam_size: int = 5
+    whisper_best_of: int = 5
+    whisper_patience: float = 1.0
+    whisper_no_speech_threshold: float = 0.4
+    whisper_logprob_threshold: float = -0.8
+    whisper_compression_ratio_threshold: float = 2.4
+    whisper_condition_on_previous_text: bool = False
+    whisper_preprocess_audio: bool = True
+    whisper_normalize_gain: bool = True
+    whisper_trim_silence: bool = True
     whisper_initial_prompt: str = (
-        "Hi Omii, please find the person, car, bicycle, dog, cat, bottle, cup, laptop, "
-        "cell phone, microwave, oven, refrigerator, remote, hair drier, chair, couch, "
-        "table, bag, backpack, glass, plate, bowl, book, clock, scissors, bed, plant, toothbrush."
+        "Hii, please find the bottle, cup, laptop, cell phone, chair, couch, "
+        "dining table, microwave, oven, refrigerator, remote, hair drier, backpack, "
+        "bag, wine glass, plate, bowl, book, clock, scissors, bed, potted plant, "
+        "toothbrush, person, car, bicycle, motorcycle, airplane, bus, train, truck, "
+        "boat, traffic light, fire hydrant, stop sign, parking meter, bench, bird, "
+        "cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe, umbrella, "
+        "handbag, tie, suitcase, frisbee, skis, snowboard, sports ball, kite, "
+        "baseball bat, baseball glove, skateboard, surfboard, tennis racket, fork, "
+        "knife, spoon, banana, apple, sandwich, orange, broccoli, carrot, hot dog, "
+        "pizza, donut, cake, toilet, mouse, keyboard, toaster, sink, vase, teddy bear. "
+        "Where is the water bottle, cell phone, laptop, coffee mug, or chair?"
     )
 
 
