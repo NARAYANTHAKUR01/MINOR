@@ -141,6 +141,7 @@ class ImageService:
         conf_threshold: float = 0.35,
         tolerance_x: float = 25.0,
         tolerance_y: float = 25.0,
+        dominance_ratio: float = 1.8,
         save_output: bool = True,
         output_dir: Path | None = None,
     ) -> tuple[RelativeSpatialResult, np.ndarray, Path | None]:
@@ -175,6 +176,7 @@ class ImageService:
             frame_shape=img.shape[:2],
             tolerance_x=tolerance_x,
             tolerance_y=tolerance_y,
+            dominance_ratio=dominance_ratio,
         )
 
         # Draw overlay showing target, anchor, connecting vector, and description

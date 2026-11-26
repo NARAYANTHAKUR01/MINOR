@@ -253,19 +253,21 @@ class SpatialReasoner:
         anchor_center: tuple[float, float],
         tolerance_x: float = 25.0,
         tolerance_y: float = 25.0,
+        dominance_ratio: float = 1.8,
     ) -> str:
         """
-        Compare target centroid with anchor centroid using configurable tolerances:
-          - target center_x < anchor center_x - tolerance_x: target is left of anchor
-          - target center_x > anchor center_x + tolerance_x: target is right of anchor
-          - target center_y < anchor center_y - tolerance_y: target is above anchor
-          - target center_y > anchor center_y + tolerance_y: target is below anchor
+        Compare target centroid with anchor centroid using configurable tolerances
+        and axis dominance:
+          - If vertical difference is small compared to horizontal, output only left/right.
+          - If horizontal difference is small compared to vertical, output only above/below.
+          - If both differences are substantial and comparable, combine them (e.g. 'above and to the right of').
         """
         return determine_relative_direction(
             target_center=target_center,
             anchor_center=anchor_center,
             tolerance_x=tolerance_x,
             tolerance_y=tolerance_y,
+            dominance_ratio=dominance_ratio,
         )
 
     @staticmethod
@@ -298,6 +300,7 @@ class SpatialReasoner:
         frame_shape: tuple[int, int] | None = None,
         tolerance_x: float = 25.0,
         tolerance_y: float = 25.0,
+        dominance_ratio: float = 1.8,
         anchor_config: "AnchorSelectionConfig | None" = None,
     ) -> "RelativeSpatialResult":
         """
@@ -305,7 +308,8 @@ class SpatialReasoner:
         1. Selects detections matching the target class (handles multiple targets clearly).
         2. Selects the most suitable reference/anchor object.
         3. Computes centroids and determines relative directions (left/right/above/below).
-        4. Generates natural language spatial description.
+        4. Applies axis dominance so minor differences in one axis do not produce noisy compound directions.
+        5. Generates natural language spatial description.
         """
         return analyze_relative_spatial_relations(
             target_class=target_class,
@@ -313,6 +317,7 @@ class SpatialReasoner:
             frame_shape=frame_shape,
             tolerance_x=tolerance_x,
             tolerance_y=tolerance_y,
+            dominance_ratio=dominance_ratio,
             anchor_config=anchor_config,
         )
 
@@ -326,6 +331,7 @@ class SpatialReasoner:
         conf_threshold: float = 0.35,
         tolerance_x: float = 25.0,
         tolerance_y: float = 25.0,
+        dominance_ratio: float = 1.8,
         anchor_config: "AnchorSelectionConfig | None" = None,
     ) -> "RelativeSpatialResult":
         """
@@ -361,6 +367,7 @@ class SpatialReasoner:
             frame_shape=frame_shape,
             tolerance_x=tolerance_x,
             tolerance_y=tolerance_y,
+            dominance_ratio=dominance_ratio,
             anchor_config=anchor_config,
         )
 
@@ -440,6 +447,7 @@ def determine_relative_direction(
     anchor_center: tuple[float, float],
     tolerance_x: float = 25.0,
     tolerance_y: float = 25.0,
+    dominance_ratio: float = 1.8,
 ) -> str:
     """
     Compares the target centroid with the anchor centroid:
@@ -448,9 +456,14 @@ def determine_relative_direction(
       - target center_y < anchor center_y - tolerance_y: target is above anchor
       - target center_y > anchor center_y + tolerance_y: target is below anchor
 
-    Uses configurable tolerances (default 25px) so slight coordinate
-    differences do not generate misleading directions.
-    Combines horizontal and vertical relations (e.g. 'above and to the left of').
+    Axis Dominance Filtering:
+      - If vertical difference is small/minor relative to horizontal (|dx| >= dominance_ratio * |dy|),
+        suppress "above" or "below" and state only "to the left of" or "to the right of".
+      - If horizontal difference is small/minor relative to vertical (|dy| >= dominance_ratio * |dx|),
+        suppress "left" or "right" and state only "above" or "below".
+      - Only combine directions (e.g. 'above and to the right of') when both axes have
+        significant and comparable differences (i.e. a true diagonal).
+      - When both differences are within tolerance, report 'right next to'.
     """
     tx, ty = target_center
     ax, ay = anchor_center
@@ -458,29 +471,29 @@ def determine_relative_direction(
     dx = tx - ax
     dy = ty - ay
 
-    # Horizontal direction
-    horiz = None
-    if dx < -abs(tolerance_x):
-        horiz = "left"
-    elif dx > abs(tolerance_x):
-        horiz = "right"
+    abs_dx = abs(dx)
+    abs_dy = abs(dy)
 
-    # Vertical direction (Note: in image coordinates, smaller y is above)
-    vert = None
-    if dy < -abs(tolerance_y):
-        vert = "above"
-    elif dy > abs(tolerance_y):
-        vert = "below"
+    # Check if offsets exceed absolute tolerances
+    horiz_valid = abs_dx > abs(tolerance_x)
+    vert_valid = abs_dy > abs(tolerance_y)
 
-    # Combine relations clearly
-    if horiz and vert:
-        return f"{vert} and to the {horiz} of"
-    elif horiz:
-        return f"to the {horiz} of"
-    elif vert:
-        return f"{vert}"
-    else:
-        return "right next to"
+    # 1. Horizontal strongly dominates over vertical (vertical is minor / negligible)
+    if horiz_valid and (not vert_valid or abs_dx >= dominance_ratio * abs_dy):
+        return "to the left of" if dx < 0 else "to the right of"
+
+    # 2. Vertical strongly dominates over horizontal (horizontal is minor / negligible)
+    if vert_valid and (not horiz_valid or abs_dy >= dominance_ratio * abs_dx):
+        return "above" if dy < 0 else "below"
+
+    # 3. Neither dominates and both exceed tolerance: true diagonal relation
+    if horiz_valid and vert_valid:
+        horiz_str = "left" if dx < 0 else "right"
+        vert_str = "above" if dy < 0 else "below"
+        return f"{vert_str} and to the {horiz_str} of"
+
+    # 4. Both within tolerance: close/overlapping
+    return "right next to"
 
 
 def select_anchor_object(
@@ -554,6 +567,7 @@ def analyze_relative_spatial_relations(
     frame_shape: tuple[int, int] | None = None,
     tolerance_x: float = 25.0,
     tolerance_y: float = 25.0,
+    dominance_ratio: float = 1.8,
     anchor_config: AnchorSelectionConfig | None = None,
 ) -> RelativeSpatialResult:
     """
@@ -634,6 +648,7 @@ def analyze_relative_spatial_relations(
         anchor_center=(a_cx, a_cy),
         tolerance_x=tolerance_x,
         tolerance_y=tolerance_y,
+        dominance_ratio=dominance_ratio,
     )
     dist_px = round(math.sqrt((t_cx - a_cx) ** 2 + (t_cy - a_cy) ** 2), 1)
 

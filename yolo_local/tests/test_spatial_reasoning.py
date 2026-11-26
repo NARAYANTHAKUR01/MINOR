@@ -103,6 +103,41 @@ class TestRelativeDirectionComparison(unittest.TestCase):
         dir_close = determine_relative_direction(target_very_close, anchor_center, tolerance_x=25.0, tolerance_y=25.0)
         self.assertEqual(dir_close, "right next to")
 
+    def test_horizontal_dominance_ignores_minor_vertical(self):
+        """
+        When horizontal difference is dominant (e.g. clearly to the right or left),
+        a minor vertical difference is suppressed (no need to say 'above' or 'below').
+        """
+        anchor_center = (300.0, 300.0)
+
+        # dx = +250 (large right offset), dy = +35 (slight vertical tilt > 25px tolerance)
+        # Dominance logic ensures we say 'to the right of' instead of 'below and to the right of'
+        target_right_minor_below = (550.0, 335.0)
+        direction = determine_relative_direction(target_right_minor_below, anchor_center, tolerance_x=25.0, tolerance_y=25.0)
+        self.assertEqual(direction, "to the right of")
+
+        # dx = -250 (large left offset), dy = -35 (slight vertical tilt)
+        target_left_minor_above = (50.0, 265.0)
+        direction_left = determine_relative_direction(target_left_minor_above, anchor_center, tolerance_x=25.0, tolerance_y=25.0)
+        self.assertEqual(direction_left, "to the left of")
+
+    def test_vertical_dominance_ignores_minor_horizontal(self):
+        """
+        When vertical difference is dominant (e.g. clearly above or below),
+        a minor horizontal difference is suppressed (no need to say 'left' or 'right').
+        """
+        anchor_center = (300.0, 300.0)
+
+        # dy = +250 (large downward offset), dx = +35 (slight horizontal tilt > 25px tolerance)
+        target_below_minor_right = (335.0, 550.0)
+        direction_below = determine_relative_direction(target_below_minor_right, anchor_center, tolerance_x=25.0, tolerance_y=25.0)
+        self.assertEqual(direction_below, "below")
+
+        # dy = -250 (large upward offset), dx = -35 (slight horizontal tilt)
+        target_above_minor_left = (265.0, 50.0)
+        direction_above = determine_relative_direction(target_above_minor_left, anchor_center, tolerance_x=25.0, tolerance_y=25.0)
+        self.assertEqual(direction_above, "above")
+
 
 class TestAnchorObjectSelection(unittest.TestCase):
     """Test selection of reference/anchor objects."""
