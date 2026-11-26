@@ -19,8 +19,8 @@ class Settings(BaseModel):
     static_dir: Path = BASE_DIR / "static"
 
     # Model settings
-    default_model_name: str = "yolo11m.pt"
-    default_model_path: Path = BASE_DIR / "models" / "yolo11m.pt"
+    default_model_name: str = "yolo11n.pt"
+    default_model_path: Path = BASE_DIR / "models" / "yolo11n.pt"
     default_conf_threshold: float = 0.35
     default_imgsz: int = 640
     default_iou_threshold: float = 0.45

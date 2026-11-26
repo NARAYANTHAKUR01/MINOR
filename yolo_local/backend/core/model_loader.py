@@ -23,6 +23,13 @@ def ensure_weights(weights_path: Path | None = None) -> Path:
         print(f"[INFO] Using existing local weights: {target_path}")
         return target_path
 
+    # Fallback to alternate local weight names if present
+    for alt_name in ("yolo11n.pt", "yolo11m.pt", "YOLOv11n.pt", "YOLOv11m.pt"):
+        alt_path = target_path.parent / alt_name
+        if alt_path.exists() and alt_path.stat().st_size > 0:
+            print(f"[INFO] Using local weights: {alt_path}")
+            return alt_path
+
     target_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"[INFO] Local model weights not found at '{target_path}'.")
     print(f"[INFO] Downloading YOLO11m weights once into '{target_path}'...")

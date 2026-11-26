@@ -239,7 +239,7 @@ def main():
         "--model",
         type=str,
         default=str(settings.default_model_path),
-        help=f"Path to local YOLO11m model weights (default: {settings.default_model_path})",
+        help=f"Path to local YOLO11n model weights (default: {settings.default_model_path})",
     )
     parser.add_argument(
         "--output-dir",
