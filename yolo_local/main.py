@@ -193,6 +193,7 @@ def run_interactive_cli(webcam_service: WebcamService, detector: ObjectDetector,
                     subprocess.run(["say", ack], check=False)
                 except Exception:
                     pass
+                time.sleep(2.0)
                 continue
 
             resp = assistant.process_text_command(line)
@@ -206,6 +207,7 @@ def run_interactive_cli(webcam_service: WebcamService, detector: ObjectDetector,
                 subprocess.run(["say", resp.speech_response], check=False)
             except Exception:
                 pass
+            time.sleep(2.0)
     finally:
         assistant.disable()
         print("\n[INFO] Interactive mode disabled.")
