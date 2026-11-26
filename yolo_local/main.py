@@ -168,10 +168,11 @@ def run_interactive_cli(webcam_service: WebcamService, detector: ObjectDetector,
     print("=" * 65)
     print(" 🎙️  OMNISIGHT INTERACTIVE VOICE ASSISTANT")
     print("=" * 65)
-    print(" Say 'Hi Omii' to activate or enter your target question directly.")
+    print(" Say 'Hii' or enter your target question directly.")
     print(" Examples:")
-    print("   • 'Hi Omii' -> Acknowledges and waits for target question")
+    print("   • 'Hii' or 'Hi' -> Acknowledges and waits for target question")
     print("   • 'Where is my bottle?' -> Searches camera frames for 5.0 seconds")
+    print("   • 'bottle' -> Extracts bottle and gives relative spatial description")
     print("   • 'Find phone on the left' -> Searches specifically in requested region")
     print("   • 'q' or 'exit' -> Exit interactive mode")
     print("-" * 65)
@@ -179,13 +180,13 @@ def run_interactive_cli(webcam_service: WebcamService, detector: ObjectDetector,
     try:
         while True:
             try:
-                line = input("\n[Interactive] Enter command or question > ").strip()
+                line = input("\n[Interactive] Enter command or object > ").strip()
             except (EOFError, KeyboardInterrupt):
                 break
             if not line or line.lower() in ("q", "quit", "exit"):
                 break
 
-            if line.lower() in ("hi omii", "hi omi", "hey omii", "hey omi", "hello omii"):
+            if line.lower() in ("hi", "hii", "hello", "hey", "hi omii", "hi omi", "hey omii", "hey omi", "hello omii"):
                 ack = "Yes, I'm listening. Which object should I find?"
                 print(f"🗣️  Assistant: \"{ack}\"")
                 try:

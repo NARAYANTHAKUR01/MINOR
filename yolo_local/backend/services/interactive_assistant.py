@@ -49,7 +49,8 @@ class InteractiveState(str, Enum):
 
 # Standard wake phrases recognized by client spotter
 WAKE_PHRASES = {
-    "hi omii", "hi omi", "hey omii", "hey omi", "hi omee", "hey omee", "hello omii", "hello omi"
+    "hi omii", "hi omi", "hey omii", "hey omi", "hi omee", "hey omee", "hello omii", "hello omi",
+    "hi", "hii", "hello", "hey"
 }
 
 WAKE_ACKNOWLEDGMENT = "Yes, I'm listening. Which object should I find?"
@@ -374,6 +375,31 @@ class InteractiveAssistant:
                 success=False,
                 state=self.state.value,
                 transcribed_text="",
+                target_object=None,
+                target_class_id=None,
+                requested_region=None,
+                found=False,
+                region_matched=False,
+                detected_region=None,
+                speech_response=speech,
+                search_duration_seconds=0.0,
+                detections=[],
+            )
+
+        # Check for simple wake greeting (e.g. "hi", "hii", "hello", "hi omii")
+        lower_text = clean_text.lower().rstrip("!.,? ")
+        if lower_text in WAKE_PHRASES:
+            speech = WAKE_ACKNOWLEDGMENT
+            self.last_response = speech
+            self.set_state(
+                InteractiveState.WAITING_FOR_WAKE_WORD
+                if self.is_active()
+                else InteractiveState.DISABLED
+            )
+            return InteractiveCommandResponse(
+                success=True,
+                state=self.state.value,
+                transcribed_text=clean_text,
                 target_object=None,
                 target_class_id=None,
                 requested_region=None,

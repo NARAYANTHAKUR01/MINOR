@@ -145,7 +145,7 @@
                 </span>
               </div>
               <p id="interactiveSubtitle" class="text-xs text-slate-400 mt-0.5">
-                Say <strong class="text-sky-300 font-semibold">"Hi Omii"</strong> to activate hands-free conversational object finding.
+                Toggle ON and say <strong class="text-sky-300 font-semibold">"Hii"</strong> or directly speak your target object.
               </p>
             </div>
           </div>
@@ -154,9 +154,9 @@
           <div class="flex items-center gap-2 flex-wrap">
             <button id="simulateWakeBtn" onclick="simulateWakeWord()" disabled
               class="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-400 hover:text-sky-300 border border-slate-700 text-xs font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
-              title="Simulates saying 'Hi Omii' in interactive mode">
+              title="Simulates saying 'Hii' in interactive mode">
               <span>👋</span>
-              <span>Say "Hi Omii"</span>
+              <span>Say "Hii"</span>
             </button>
 
             <button id="interactiveAskBtn" onclick="triggerInteractiveVoiceQuestion()" disabled
@@ -1213,9 +1213,9 @@
       switch (state) {
         case 'WAITING_FOR_WAKE_WORD':
           if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-sky-400 pulse-dot';
-          if (badgeText) badgeText.textContent = 'WAITING FOR "HI OMII"';
+          if (badgeText) badgeText.textContent = 'LISTENING FOR "HII" OR OBJECT';
           if (stateBadge) stateBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-sky-950/80 text-sky-300 border border-sky-500/40 font-semibold flex items-center gap-1.5';
-          if (liveStatus) liveStatus.textContent = 'Listening for "Hi Omii"...';
+          if (liveStatus) liveStatus.textContent = 'Listening for "Hii" or object name...';
           break;
         case 'ACKNOWLEDGING_WAKE_WORD':
           if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-indigo-400 pulse-dot';
@@ -1276,14 +1276,21 @@
         });
         const data = await res.json();
         isInteractiveMode = true;
-        updateInteractiveUI('WAITING_FOR_WAKE_WORD');
 
         // Ensure camera stream is running so YOLO can search live frames
         if (!isStreaming) {
           toggleWebcamStream();
         }
 
-        startWakeWordDetection();
+        const greeting = "Hi, I'm listening. Which object should I find?";
+        const replyEl = document.getElementById('interactiveLastReply');
+        if (replyEl) replyEl.textContent = `"${greeting}"`;
+
+        updateInteractiveUI('ACKNOWLEDGING_WAKE_WORD');
+        speak(greeting, () => {
+          if (!isInteractiveMode) return;
+          continueListeningLoop();
+        });
       } catch (err) {
         console.error('Failed to enable interactive mode:', err);
         alert('Failed to enable interactive mode: ' + err.message);
@@ -1341,7 +1348,9 @@
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             const transcript = event.results[i][0].transcript.toLowerCase().trim();
             const wakeMatch = transcript.match(/(?:hi|hey|hello|ok|okay)?\s*(?:omii|omi|omee)\b\s*[:,\s]*(.*)/i);
+            const greetingMatch = transcript.match(/^(?:hi|hii|hey|hello)\b\s*[:,\s]*(.*)/i);
             const wakeDetected = wakeMatch !== null ||
+              greetingMatch !== null ||
               transcript.includes('hi omii') ||
               transcript.includes('hi omi') ||
               transcript.includes('hey omii') ||
@@ -1352,7 +1361,11 @@
               transcript.includes('hello omi') ||
               transcript.includes('omii') ||
               transcript.includes('omi') ||
-              transcript.includes('omee');
+              transcript.includes('omee') ||
+              transcript === 'hi' ||
+              transcript === 'hii' ||
+              transcript === 'hey' ||
+              transcript === 'hello';
 
             if (wakeDetected) {
               console.log('[WAKE DETECTED]:', transcript);
@@ -1361,15 +1374,17 @@
               let commandAfterWake = '';
               if (wakeMatch && wakeMatch[1]) {
                 commandAfterWake = wakeMatch[1].trim();
+              } else if (greetingMatch && greetingMatch[1]) {
+                commandAfterWake = greetingMatch[1].trim();
               } else {
                 commandAfterWake = transcript
-                  .replace(/\b(?:hi|hey|hello|ok|okay)?\s*(?:omii|omi|omee)\b/gi, '')
+                  .replace(/\b(?:hi|hii|hey|hello|ok|okay)?\s*(?:omii|omi|omee)?\b/gi, '')
                   .trim();
               }
               commandAfterWake = commandAfterWake.replace(/^[:,\-—\.]+\s*/, '').trim();
 
               if (commandAfterWake.length > 0) {
-                // User spoke the target object directly with the wake word in one breath!
+                // User spoke the target object directly with the wake greeting in one breath!
                 handleDirectWakeCommand(commandAfterWake, transcript);
               } else {
                 handleWakeWordTriggered();
@@ -1450,7 +1465,8 @@
 
         updateInteractiveUI('SPEAKING_RESPONSE');
         speak(data.speech_response, () => {
-          returnToWakeListening();
+          if (!isInteractiveMode) return;
+          continueListeningLoop();
         });
 
       } catch (err) {
@@ -1462,6 +1478,7 @@
     // User or UI triggers wake word
     function simulateWakeWord() {
       if (!isInteractiveMode) return;
+      abortQuestionRecording();
       stopWakeWordDetection();
       handleWakeWordTriggered();
     }
@@ -1475,12 +1492,12 @@
       const replyEl = document.getElementById('interactiveLastReply');
       if (replyEl) replyEl.textContent = `"${ackText}"`;
       const queryEl = document.getElementById('interactiveLastQuery');
-      if (queryEl) queryEl.textContent = '"Hi Omii"';
+      if (queryEl) queryEl.textContent = '"Hii"';
 
       // Speak acknowledgment and mute mic to avoid self-triggering
       speak(ackText, () => {
         if (!isInteractiveMode) return;
-        recordUserQuestionWithVAD();
+        continueListeningLoop();
       });
     }
 
@@ -1488,6 +1505,17 @@
       if (!isInteractiveMode) return;
       stopWakeWordDetection();
       recordUserQuestionWithVAD();
+    }
+
+    function continueListeningLoop() {
+      if (!isInteractiveMode) return;
+      stopWakeWordDetection();
+      updateInteractiveUI('LISTENING_FOR_COMMAND', 'Listening for next object (speak now)...');
+      setTimeout(() => {
+        if (isInteractiveMode) {
+          recordUserQuestionWithVAD();
+        }
+      }, 350);
     }
 
     // Record User Question with Voice Activity Detection (VAD) / Silence Endpointing
@@ -1633,7 +1661,10 @@
           if (audioBlob.size > 800 || (interactiveClientHint && interactiveClientHint.trim())) {
             await processInteractiveAudio(audioBlob, interactiveClientHint);
           } else {
-            handleAudioProcessingError("Sorry, I couldn't hear any speech. Please try again.");
+            // Keep listening for the user's next object without interruption
+            if (isInteractiveMode) {
+              continueListeningLoop();
+            }
           }
         };
 
@@ -1642,7 +1673,11 @@
       } catch (err) {
         console.error('Failed to start question recording:', err);
         isRecordingQuestion = false;
-        returnToWakeListening();
+        if (isInteractiveMode) {
+          continueListeningLoop();
+        } else {
+          returnToWakeListening();
+        }
       }
     }
 
@@ -1709,7 +1744,8 @@
 
         updateInteractiveUI('SPEAKING_RESPONSE');
         speak(data.speech_response, () => {
-          returnToWakeListening();
+          if (!isInteractiveMode) return;
+          continueListeningLoop();
         });
 
       } catch (err) {
@@ -1724,7 +1760,8 @@
       const replyEl = document.getElementById('interactiveLastReply');
       if (replyEl) replyEl.textContent = `"${message}"`;
       speak(message, () => {
-        returnToWakeListening();
+        if (!isInteractiveMode) return;
+        continueListeningLoop();
       });
     }
 
