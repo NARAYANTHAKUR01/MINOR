@@ -1,0 +1,2074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniSight · Smart Visual Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-main);
+      color: #f1f5f9;
+      letter-spacing: -0.01em;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .app-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    }
+    .pulse-dot {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+    .wave-bar {
+      animation: wave 1s ease-in-out infinite alternate;
+    }
+    @keyframes wave {
+      0% { height: 4px; }
+      100% { height: 22px; }
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b1120;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #25334d;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #38bdf8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-sky-500 selection:text-white">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Simple Tag -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-lg text-white tracking-tight">OmniSight</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium">Local AI</span>
+          </div>
+          <p class="text-[11px] text-slate-400 -mt-0.5">Find anything around you with voice</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800/80">
+        <button onclick="switchTab('hudTab')" id="navHud" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-sky-500 text-slate-950 shadow-sm transition">
+          Live Camera
+        </button>
+        <button onclick="switchTab('uploadTab')" id="navUpload" class="px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+          Photo &amp; Video
+        </button>
+        <button onclick="switchTab('nlpTab')" id="navNlp" class="px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+          What I Can Find (80 Objects)
+        </button>
+      </nav>
+
+      <!-- Right Header Actions -->
+      <div class="flex items-center gap-3">
+        <button onclick="toggleWebcamStream()" id="mainStreamToggleBtn" class="px-4 py-2 text-xs font-bold rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20 transition flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-slate-950"></span>
+          <span>Start Camera</span>
+        </button>
+        <a href="/docs" target="_blank" title="API Documentation" class="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 space-y-6">
+
+    <!-- ======================================================== -->
+    <!-- TAB 1: LIVE CAMERA & VOICE FINDER (PRIMARY INTERFACE)   -->
+    <!-- ======================================================== -->
+    <div id="hudTab" class="space-y-5">
+      
+      <!-- Interactive Voice Assistant Card -->
+      <div class="app-card rounded-2xl p-4 md:p-5 border border-sky-500/20 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-slate-900/90 shadow-lg relative overflow-hidden">
+        <div id="interactiveGlow" class="hidden absolute -right-20 -top-20 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+          
+          <!-- Left: Mode Title & Toggle Button -->
+          <div class="flex items-center gap-4">
+            <button id="interactiveToggleBtn" onclick="toggleInteractiveMode()"
+              type="button"
+              role="switch"
+              aria-checked="false"
+              class="relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-slate-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-slate-900">
+              <span class="sr-only">Toggle Interactive Mode</span>
+              <span id="interactiveToggleKnob"
+                class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
+            </button>
+
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-base font-bold text-white tracking-tight">Interactive Mode</span>
+                <span id="interactiveStateBadge" class="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-semibold flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-500" id="interactiveBadgeDot"></span>
+                  <span id="interactiveBadgeText">OFF</span>
+                </span>
+              </div>
+              <p id="interactiveSubtitle" class="text-xs text-slate-400 mt-0.5">
+                Say <strong class="text-sky-300 font-semibold">"Hi Omii"</strong> to activate hands-free conversational object finding.
+              </p>
+            </div>
+          </div>
+
+          <!-- Right: Interactive Controls & Quick Actions -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="simulateWakeBtn" onclick="simulateWakeWord()" disabled
+              class="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-400 hover:text-sky-300 border border-slate-700 text-xs font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              title="Simulates saying 'Hi Omii' in interactive mode">
+              <span>👋</span>
+              <span>Say "Hi Omii"</span>
+            </button>
+
+            <button id="interactiveAskBtn" onclick="triggerInteractiveVoiceQuestion()" disabled
+              class="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-400 hover:text-emerald-300 border border-slate-700 text-xs font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              title="Record question with silence detection">
+              <span>🎙️</span>
+              <span>Ask Question</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Dynamic Live Interactive Assistant Dialogue Banner -->
+        <div id="interactiveDialogueBox" class="mt-4 pt-3 border-t border-slate-800/70 hidden transition-all duration-300">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/60 rounded-xl p-3 border border-slate-800/80 text-xs">
+            
+            <div class="flex items-center gap-3">
+              <div id="interactiveIconContainer" class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 flex-shrink-0">
+                <svg id="interactiveMicIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+
+              <div>
+                <div class="text-[11px] text-slate-400 uppercase font-bold tracking-wider" id="interactiveStatusHeading">Assistant Status</div>
+                <div class="text-sm font-semibold text-white mt-0.5" id="interactiveLiveStatus">Waiting for "Hi Omii"...</div>
+              </div>
+            </div>
+
+            <!-- Dialogue bubbles -->
+            <div class="flex flex-col gap-1 sm:text-right max-w-md">
+              <div class="text-[11px] text-slate-400 truncate">
+                You: <span id="interactiveLastQuery" class="text-sky-300 font-medium italic">"..."</span>
+              </div>
+              <div class="text-xs text-emerald-300 font-medium truncate">
+                Omii: <span id="interactiveLastReply" class="text-white">"Yes, I'm listening. Which object should I find?"</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Smart Voice & Search Bar (Clean Hero Box) -->
+      <div class="app-card rounded-2xl p-4 md:p-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          
+          <!-- Search & Voice Input Group -->
+          <div class="flex-1 flex items-center gap-2.5 bg-slate-950/80 border border-slate-800 rounded-xl px-3.5 py-2 focus-within:border-sky-500/70 transition">
+            <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input type="text" id="customSentenceInput"
+              placeholder="What are you looking for? (e.g. 'Where is my phone?', 'Find bottle')"
+              class="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
+              onkeydown="if(event.key==='Enter') submitCustomSentence()">
+            
+            <!-- Mic Record Button -->
+            <button onclick="toggleVoiceInput()" id="micBtn" title="Speak to search using local Whisper AI"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 transition text-xs font-semibold flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              <span id="micStatusText">Speak</span>
+            </button>
+
+            <!-- Search Submit -->
+            <button onclick="submitCustomSentence()"
+              class="px-3.5 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 text-xs font-bold transition flex-shrink-0">
+              Find
+            </button>
+          </div>
+
+          <!-- Quick Find Chips -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-xs text-slate-400 mr-1">Quick find:</span>
+            <button onclick="triggerVoiceQuery('Where is my cell phone?')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs transition">
+              📱 Phone
+            </button>
+            <button onclick="triggerVoiceQuery('Where is my water bottle?')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs transition">
+              🧴 Bottle
+            </button>
+            <button onclick="triggerVoiceQuery('Find laptop')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs transition">
+              💻 Laptop
+            </button>
+            <button onclick="triggerVoiceQuery('Locate coffee mug')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs transition">
+              ☕ Cup
+            </button>
+            <button onclick="triggerVoiceQuery('Find backpack')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs transition">
+              🎒 Backpack
+            </button>
+            <button onclick="clearTargetLock()" class="px-2.5 py-1 rounded-lg bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-rose-300 border border-slate-800 text-xs transition">
+              ✕ Clear Filter
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Main Live Grid: Video (Primary) & Detections (Secondary) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Camera Viewport (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+          <div class="app-card rounded-2xl overflow-hidden border border-slate-800 relative flex flex-col">
+            
+            <!-- Video Top Header Bar -->
+            <div class="bg-slate-950/90 px-4 py-2.5 border-b border-slate-800/80 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                <span class="font-semibold text-slate-200">Live Camera</span>
+                <span class="text-slate-500">·</span>
+                <span class="text-slate-400 text-[11px]" id="resIndicator">Active</span>
+              </div>
+
+              <!-- Active Target Lock Badge -->
+              <div id="targetLockPill" class="hidden flex items-center gap-2 bg-emerald-950/70 border border-emerald-500/50 px-2.5 py-0.5 rounded-lg text-xs text-emerald-300">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>Locating: <strong id="targetLockText" class="text-white uppercase font-bold">BOTTLE</strong></span>
+                <button onclick="clearTargetLock()" class="text-emerald-400 hover:text-white ml-1 font-bold" title="Show all objects">✕</button>
+              </div>
+
+              <!-- Fullscreen & Stream Button -->
+              <div class="flex items-center gap-2">
+                <button onclick="toggleWebcamStream()" id="pauseResumeBtn" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs transition">
+                  Stop Camera
+                </button>
+                <button onclick="toggleFullscreen()" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs transition" title="Fullscreen">
+                  ⛶
+                </button>
+              </div>
+            </div>
+
+            <!-- Video Surface -->
+            <div class="relative bg-slate-950 min-h-[380px] max-h-[520px] flex items-center justify-center overflow-hidden">
+              
+              <!-- MJPEG Video Element -->
+              <img id="liveStreamImg" src="" alt="OmniSight Live Feed" class="w-full h-auto object-contain hidden select-none">
+              
+              <!-- Idle Camera Placeholder -->
+              <div id="streamIdleState" class="text-center p-8 flex flex-col items-center">
+                <div class="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-4">
+                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 class="text-base font-semibold text-white">Camera is currently idle</h3>
+                <p class="text-xs text-slate-400 max-w-sm mt-1 mb-5">
+                  Click the button below to turn on your camera and let OmniSight find objects around you.
+                </p>
+                <button onclick="toggleWebcamStream()" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20 transition">
+                  Turn On Camera
+                </button>
+              </div>
+
+              <!-- Humanized Natural Guidance Banner (Floats on video) -->
+              <div id="spatialTargetBanner" class="hidden absolute top-4 inset-x-6 z-20 flex justify-center pointer-events-none transition-all duration-300">
+                <div class="bg-slate-950/90 backdrop-blur-md border border-sky-400/50 rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg shadow-black/50">
+                  <div id="bannerDirectionArrow" class="text-sky-400 text-lg font-bold">←</div>
+                  <div>
+                    <div id="bannerTargetTitle" class="text-xs font-semibold text-white">
+                      Object spotted on your left
+                    </div>
+                    <div class="text-[11px] text-sky-300">
+                      About <span id="bannerTargetRange">2.1 ft</span> away · <span id="bannerTargetConf">98% confidence</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Natural Spoken Feedback Strip (Below camera) -->
+            <div class="bg-slate-950 px-4 py-3 border-t border-slate-800 flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-400 flex-shrink-0">
+                  💬
+                </div>
+                <div class="min-w-0">
+                  <div class="text-[10px] text-slate-400 uppercase font-medium">Assistant Voice Feedback</div>
+                  <div id="voiceResponseDisplay" class="text-xs text-slate-200 font-medium truncate">
+                    "Ready to help. Ask me to find something or show an object to the camera."
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <button onclick="replayVoice()" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs transition" title="Replay spoken answer">
+                  🔊 Repeat
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Subtle Natural Query Log Bar -->
+          <div class="app-card rounded-xl p-3 flex items-center justify-between text-xs text-slate-400">
+            <div class="flex items-center gap-2 truncate">
+              <span class="text-slate-500">Last query:</span>
+              <span id="userQueryDisplay" class="text-white font-medium italic">"Where is my water bottle and cell phone?"</span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span id="intentDisplay" class="px-2 py-0.5 rounded bg-slate-900 text-sky-300 border border-slate-800 text-[10px]">Intent: Locate</span>
+              <div id="nlpTargetBadges" class="hidden"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Side: Detected Objects & Simple Settings (4 cols) -->
+        <div class="lg:col-span-4 flex flex-col gap-5">
+          
+          <!-- Detected Objects in View Card -->
+          <div class="app-card rounded-2xl p-5 flex flex-col flex-1">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+              <div>
+                <h3 class="text-sm font-bold text-white">Objects Nearby</h3>
+                <p class="text-xs text-slate-400">Items currently recognized in view</p>
+              </div>
+              <button onclick="clearTargetLock()" class="text-xs text-sky-400 hover:text-sky-300 transition">
+                Show All
+              </button>
+            </div>
+
+            <!-- Dynamic Detection Cards List -->
+            <div id="detectionHistoryList" class="flex-1 space-y-2 overflow-y-auto max-h-[380px] pr-1">
+              <!-- Default sample state -->
+              <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="text-lg">🧴</div>
+                  <div>
+                    <div class="text-xs font-semibold text-white">Water Bottle</div>
+                    <div class="text-[11px] text-slate-400">On your left · 2 ft away</div>
+                  </div>
+                </div>
+                <button onclick="setTargetLock('bottle')" class="px-2 py-1 rounded bg-slate-900 hover:bg-sky-500/20 text-sky-400 border border-slate-800 text-[10px] transition">
+                  Focus
+                </button>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="text-lg">📱</div>
+                  <div>
+                    <div class="text-xs font-semibold text-white">Cell Phone</div>
+                    <div class="text-[11px] text-slate-400">In front of you · 1.5 ft away</div>
+                  </div>
+                </div>
+                <button onclick="setTargetLock('cell phone')" class="px-2 py-1 rounded bg-slate-900 hover:bg-sky-500/20 text-sky-400 border border-slate-800 text-[10px] transition">
+                  Focus
+                </button>
+              </div>
+            </div>
+
+            <!-- Hidden Telemetry Bridge Elements for JS Compatibility -->
+            <div class="hidden">
+              <span id="telemetryDepth">0.8m</span>
+              <span id="telemetryVector">0°</span>
+              <span id="topbarLatency">14ms</span>
+              <span id="cardLatency">14ms</span>
+              <span id="topbarFps">45 FPS</span>
+              <span id="cardFps">45</span>
+              <span id="queryConf">95%</span>
+            </div>
+          </div>
+
+          <!-- Simple Settings Card -->
+          <div class="app-card rounded-2xl p-5 space-y-4">
+            <h3 class="text-sm font-bold text-white">Camera Settings</h3>
+            
+            <!-- Sensitivity Slider -->
+            <div>
+              <div class="flex items-center justify-between text-xs mb-1.5">
+                <span class="text-slate-300">Detection Sensitivity</span>
+                <span id="confDisplay" class="text-sky-400 font-semibold">40%</span>
+              </div>
+              <input type="range" id="confSlider" min="0.1" max="0.9" step="0.05" value="0.4"
+                class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400">
+              <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                <span>Sensitive</span>
+                <span>Normal</span>
+                <span>Strict</span>
+              </div>
+            </div>
+
+            <!-- Speed & Quality Switcher -->
+            <div>
+              <div class="text-xs text-slate-300 mb-2">Camera Mode</div>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="setResolution(512)" id="btnRes512"
+                  class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40 transition">
+                  ⚡ Fast &amp; Smooth
+                </button>
+                <button onclick="setResolution(640)" id="btnRes640"
+                  class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-white transition">
+                  🎯 High Detail
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 2: PHOTO & VIDEO UPLOAD                             -->
+    <!-- ======================================================== -->
+    <div id="uploadTab" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Upload Box -->
+      <div class="lg:col-span-5 app-card rounded-2xl p-6 flex flex-col justify-between">
+        <div>
+          <h2 class="text-base font-bold text-white mb-1">Analyze a Photo or Video</h2>
+          <p class="text-xs text-slate-400 mb-6">Upload any image or video to locate objects offline.</p>
+
+          <div class="border-2 border-dashed border-slate-800 hover:border-sky-500/50 rounded-2xl p-8 text-center cursor-pointer transition bg-slate-950/40 mb-5"
+               onclick="document.getElementById('staticFileInput').click()">
+            <input type="file" id="staticFileInput" accept="image/*,video/*" class="hidden">
+            <div class="w-12 h-12 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center mx-auto mb-3 text-xl">
+              📂
+            </div>
+            <p id="staticFileName" class="text-sm font-semibold text-slate-200">Click to select photo or video</p>
+            <p class="text-xs text-slate-500 mt-1">Supports JPG, PNG, MP4</p>
+          </div>
+        </div>
+
+        <button onclick="runFileUploadDetection()" id="fileDetectBtn"
+          class="w-full py-3 rounded-xl font-bold text-xs bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20 transition">
+          Process Media
+        </button>
+      </div>
+
+      <!-- Result View -->
+      <div class="lg:col-span-7 app-card rounded-2xl p-6 flex flex-col">
+        <h2 class="text-base font-bold text-white mb-4">Detection Result</h2>
+        <div class="flex-1 min-h-[360px] bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center overflow-hidden relative">
+          <img id="staticResultImg" class="max-h-[460px] w-auto object-contain hidden" alt="Annotated Output">
+          <video id="staticResultVideo" controls class="max-h-[460px] w-auto object-contain hidden"></video>
+          <div id="staticPlaceholder" class="text-center p-8 text-slate-500 text-xs">
+            No media processed yet. Choose a file on the left and click Process.
+          </div>
+          <div id="staticSpinner" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-2 border-sky-400 border-t-transparent"></div>
+            <p class="text-xs text-sky-300 mt-3 font-medium">Processing locally with Apple Silicon GPU...</p>
+          </div>
+        </div>
+        <div id="uploadDetectionChips" class="mt-4 flex flex-wrap gap-2 max-h-32 overflow-y-auto"></div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 3: WHAT I CAN FIND (80 COCO OBJECTS & VOICE TESTER)  -->
+    <!-- ======================================================== -->
+    <div id="nlpTab" class="hidden space-y-6">
+      
+      <!-- Friendly Introduction Banner -->
+      <div class="app-card rounded-2xl p-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 mb-2 inline-block">
+              80 Recognizable Everyday Objects
+            </span>
+            <h2 class="text-xl font-bold text-white">Natural Speech &amp; Object Library</h2>
+            <p class="text-xs text-slate-400 mt-1 max-w-2xl">
+              OmniSight listens to your everyday words and understands common nicknames, plural forms, and colors.
+              Try saying or typing any sentence below to see what it understands.
+            </p>
+          </div>
+
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-400"></div>
+            <div>
+              <div class="text-[10px] text-slate-400 font-medium">Speech-To-Text</div>
+              <div class="text-xs font-bold text-white" id="sttActiveDisplay">Local Whisper AI</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Playground Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left: Speech Tester (7 cols) -->
+        <div class="lg:col-span-7 space-y-5">
+          <div class="app-card rounded-2xl p-5 space-y-4">
+            <h3 class="text-sm font-bold text-white">Test Any Spoken Sentence</h3>
+            
+            <div class="flex gap-2">
+              <input type="text" id="nlpTestInput"
+                value="Can you find my cell phone and two red apples on the dining table?"
+                placeholder="Type or speak a sentence..."
+                class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400"
+                onkeydown="if(event.key==='Enter') runNlpTest()">
+              
+              <button onclick="toggleNlpVoiceRecord()" id="nlpRecordBtn"
+                class="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-sky-400 text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" id="nlpRecordIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                <span id="nlpRecordBtnText">Speak</span>
+              </button>
+
+              <button onclick="runNlpTest()"
+                class="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl transition">
+                Analyze
+              </button>
+            </div>
+
+            <!-- Preset Suggestions -->
+            <div class="flex flex-wrap gap-1.5 text-xs pt-1">
+              <span class="text-slate-500 text-xs mr-1 self-center">Try:</span>
+              <button onclick="setNlpPreset('Where is my water bottle and phone?')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs transition">
+                "Water bottle &amp; phone"
+              </button>
+              <button onclick="setNlpPreset('Find the laptop on the table')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs transition">
+                "Find laptop"
+              </button>
+              <button onclick="setNlpPreset('Look at that cute puppy and kitten on the couch')" class="px-2.5 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs transition">
+                "Puppy &amp; kitten"
+              </button>
+            </div>
+
+            <!-- Extraction Output Results -->
+            <div class="pt-4 border-t border-slate-800 space-y-3" id="nlpResultCard">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-semibold text-slate-200">Recognized Targets:</span>
+                <span id="nlpIntentBadge" class="px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[10px]">LOCATE</span>
+              </div>
+              <div id="nlpTargetChips" class="flex flex-wrap gap-2 text-xs"></div>
+              
+              <div id="nlpExcludedContainer" class="hidden">
+                <span class="text-[11px] text-rose-400 font-medium">Excluded by negation:</span>
+                <div id="nlpExcludedChips" class="flex flex-wrap gap-2 text-xs mt-1"></div>
+              </div>
+
+              <!-- Structured Entities -->
+              <div class="pt-2">
+                <div class="overflow-x-auto rounded-xl border border-slate-800">
+                  <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-950 text-slate-400 text-[11px] border-b border-slate-800">
+                      <tr>
+                        <th class="py-2 px-3">Object</th>
+                        <th class="py-2 px-3">Spoken Word</th>
+                        <th class="py-2 px-3">Count</th>
+                        <th class="py-2 px-3">Description</th>
+                        <th class="py-2 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="nlpEntitiesTableBody" class="divide-y divide-slate-800/60 text-slate-300"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="hidden">
+                <span id="nlpLatencyDisplay"></span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Audio File Transcription Card -->
+          <div class="app-card rounded-2xl p-5 space-y-3">
+            <h3 class="text-sm font-bold text-white">Transcribe Audio File (.wav, .mp3)</h3>
+            <div class="flex gap-2">
+              <input type="file" id="sttAudioFileInput" accept="audio/*"
+                class="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer">
+              <button onclick="uploadAudioForNlp()" id="uploadAudioBtn"
+                class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-sky-300 text-xs font-semibold rounded-xl border border-slate-700 transition flex-shrink-0">
+                Transcribe
+              </button>
+            </div>
+            <div id="sttUploadTelemetry" class="hidden text-xs text-slate-400">
+              Model: <span id="sttUploadModel" class="text-white"></span> · <span id="sttUploadLatency" class="text-emerald-400"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: 80 COCO Objects Directory (5 cols) -->
+        <div class="lg:col-span-5 app-card rounded-2xl p-5 flex flex-col h-[600px]">
+          <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+            <div>
+              <h3 class="text-sm font-bold text-white">Supported Objects Directory</h3>
+              <p class="text-xs text-slate-400">80 everyday classes OmniSight can see</p>
+            </div>
+            <span class="text-xs font-bold text-sky-400" id="classesCountDisplay">80 items</span>
+          </div>
+
+          <div class="mb-3">
+            <input type="text" id="classFilterInput" placeholder="Filter objects (e.g. phone, cup, laptop)..."
+              oninput="filterClassesGrid()"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-400">
+          </div>
+
+          <div class="flex-1 overflow-y-auto space-y-1.5 pr-1" id="cocoClassesList"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Hidden History Tab (Retained for JS compatibility) -->
+    <div id="historyTab" class="hidden">
+      <table class="hidden"><tbody id="telemetryTableBody"></tbody></table>
+    </div>
+
+  </main>
+
+  <!-- Clean, Minimalist Footer -->
+  <footer class="border-t border-slate-800/80 bg-slate-950 px-4 py-4 text-xs text-slate-500 mt-auto">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>
+        OmniSight · Local Apple Silicon Object Finder with Whisper Speech AI.
+      </div>
+      <div class="text-slate-400">
+        100% Private · Runs completely offline on your Mac.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic & Telemetry Engine -->
+  <script>
+    // Global State
+    let isStreaming = false;
+    let currentConf = 0.4;
+    let currentImgsz = 512;
+    let activeFilters = new Set(['bottle', 'cell phone', 'laptop', 'cup', 'person', 'chair']);
+    let telemetryPollInterval = null;
+    let historicalDetections = [];
+    let lastVoiceSpoken = "Water bottle spotted on your left, about 2 feet away.";
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      ['hudTab', 'uploadTab', 'nlpTab', 'historyTab'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      const target = document.getElementById(tabId);
+      if (target) target.classList.remove('hidden');
+
+      const tabs = {
+        hudTab: 'navHud',
+        uploadTab: 'navUpload',
+        nlpTab: 'navNlp'
+      };
+
+      Object.entries(tabs).forEach(([tId, btnId]) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (tId === tabId) {
+          btn.className = "px-4 py-1.5 text-xs font-semibold rounded-lg bg-sky-500 text-slate-950 shadow-sm transition";
+        } else {
+          btn.className = "px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+        }
+      });
+    }
+
+    // Resolution Acceleration Switching
+    function setResolution(res) {
+      currentImgsz = res;
+      const b512 = document.getElementById('btnRes512');
+      const b640 = document.getElementById('btnRes640');
+      if (b512) {
+        b512.className = res === 512 
+          ? "py-1.5 px-3 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40 transition"
+          : "py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-white transition";
+      }
+      if (b640) {
+        b640.className = res === 640 
+          ? "py-1.5 px-3 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40 transition"
+          : "py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 hover:text-white transition";
+      }
+      
+      const resInd = document.getElementById('resIndicator');
+      if (resInd) resInd.textContent = res === 512 ? "Active" : "High Detail";
+
+      if (isStreaming) {
+        restartStream();
+      }
+    }
+
+    // Confidence Slider
+    const confSlider = document.getElementById('confSlider');
+    const confDisplay = document.getElementById('confDisplay');
+    if (confSlider) {
+      confSlider.addEventListener('input', (e) => {
+        currentConf = parseFloat(e.target.value);
+        if (confDisplay) confDisplay.textContent = `${Math.round(currentConf * 100)}%`;
+        if (isStreaming) {
+          restartStream();
+        }
+      });
+    }
+
+    // Stream Toggle
+    function toggleWebcamStream() {
+      const img = document.getElementById('liveStreamImg');
+      const idle = document.getElementById('streamIdleState');
+      const mainBtn = document.getElementById('mainStreamToggleBtn');
+      const pauseBtn = document.getElementById('pauseResumeBtn');
+
+      if (!isStreaming) {
+        img.src = `/api/stream/webcam?conf=${currentConf}&imgsz=${currentImgsz}&t=${Date.now()}`;
+        img.classList.remove('hidden');
+        idle.classList.add('hidden');
+        if (mainBtn) {
+          mainBtn.innerHTML = '<span class="w-2 h-2 rounded-full bg-white"></span><span>Stop Camera</span>';
+          mainBtn.className = "px-4 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/20 transition flex items-center gap-2";
+        }
+        if (pauseBtn) pauseBtn.textContent = "Stop Camera";
+        isStreaming = true;
+
+        startTelemetryPolling();
+      } else {
+        img.src = "";
+        img.classList.add('hidden');
+        idle.classList.remove('hidden');
+        if (mainBtn) {
+          mainBtn.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-950"></span><span>Start Camera</span>';
+          mainBtn.className = "px-4 py-2 text-xs font-bold rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-md shadow-sky-500/20 transition flex items-center gap-2";
+        }
+        if (pauseBtn) pauseBtn.textContent = "Start Camera";
+        isStreaming = false;
+
+        stopTelemetryPolling();
+        const banner = document.getElementById('spatialTargetBanner');
+        if (banner) banner.classList.add('hidden');
+      }
+    }
+
+    function restartStream() {
+      if (isStreaming) {
+        const img = document.getElementById('liveStreamImg');
+        img.src = `/api/stream/webcam?conf=${currentConf}&imgsz=${currentImgsz}&t=${Date.now()}`;
+      }
+    }
+
+    // Telemetry Polling Loop
+    function startTelemetryPolling() {
+      if (telemetryPollInterval) clearInterval(telemetryPollInterval);
+      telemetryPollInterval = setInterval(fetchTelemetry, 350);
+    }
+
+    function stopTelemetryPolling() {
+      if (telemetryPollInterval) {
+        clearInterval(telemetryPollInterval);
+        telemetryPollInterval = null;
+      }
+    }
+
+    async function clearTargetLock() {
+      try {
+        const res = await fetch('/api/stream/clear-target', { method: 'POST' });
+        if (res.ok) {
+          const pill = document.getElementById('targetLockPill');
+          if (pill) pill.classList.add('hidden');
+          const banner = document.getElementById('spatialTargetBanner');
+          if (banner) banner.classList.add('hidden');
+        }
+      } catch (e) {
+        console.error("Error clearing target lock:", e);
+      }
+    }
+
+    async function setTargetLock(targetName) {
+      if (!targetName) return;
+      try {
+        const res = await fetch('/api/stream/set-target', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: targetName })
+        });
+        const data = await res.json();
+        if (data.target_locked) {
+          const pill = document.getElementById('targetLockPill');
+          const text = document.getElementById('targetLockText');
+          if (pill && text) {
+            text.textContent = (data.active_targets || [targetName]).join(', ');
+            pill.classList.remove('hidden');
+          }
+        }
+      } catch (e) {
+        console.error("Error setting target lock:", e);
+      }
+    }
+
+    async function fetchTelemetry() {
+      try {
+        const res = await fetch('/api/stream/telemetry');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update Target Lock UI indicator
+        const pill = document.getElementById('targetLockPill');
+        const lockText = document.getElementById('targetLockText');
+        if (data.target_locked && data.active_targets && data.active_targets.length > 0) {
+          if (pill && lockText) {
+            lockText.textContent = data.active_targets.join(', ');
+            pill.classList.remove('hidden');
+          }
+        } else if (pill) {
+          pill.classList.add('hidden');
+        }
+
+        // Process detections
+        const detections = data.detections || [];
+        const banner = document.getElementById('spatialTargetBanner');
+        const title = document.getElementById('bannerTargetTitle');
+        const arrow = document.getElementById('bannerDirectionArrow');
+        const range = document.getElementById('bannerTargetRange');
+        const conf = document.getElementById('bannerTargetConf');
+
+        if (detections.length > 0) {
+          const topItem = detections[0];
+
+          if (banner) {
+            banner.classList.remove('hidden');
+            const sectorStr = topItem.sector.toLowerCase();
+            title.textContent = `${topItem.class_name.charAt(0).toUpperCase() + topItem.class_name.slice(1)} spotted in your ${sectorStr}`;
+            arrow.textContent = topItem.azimuth_deg < -8 ? '←' : (topItem.azimuth_deg > 8 ? '→' : '↑');
+            if (range) range.textContent = `${topItem.distance_ft} ft`;
+            if (conf) conf.textContent = `${Math.round(topItem.confidence)}% match`;
+          }
+
+          // Add to history list
+          addDetectionToHistory(topItem);
+        } else if (data.target_locked && data.active_targets && data.active_targets.length > 0) {
+          if (banner) {
+            banner.classList.remove('hidden');
+            title.textContent = `Looking for ${data.active_targets.join(', ')}... (not in view yet)`;
+            arrow.textContent = '🔍';
+            if (range) range.textContent = 'Searching';
+            if (conf) conf.textContent = 'Scanning scene';
+          }
+        } else if (banner) {
+          banner.classList.add('hidden');
+        }
+      } catch (err) {
+        // silent catch
+      }
+    }
+
+    const CLASS_EMOJIS = {
+      bottle: '🧴',
+      'cell phone': '📱',
+      cup: '☕',
+      laptop: '💻',
+      person: '👤',
+      chair: '🪑',
+      book: '📖',
+      backpack: '🎒',
+      keyboard: '⌨️',
+      mouse: '🖱️'
+    };
+
+    function addDetectionToHistory(item) {
+      const now = Date.now();
+      const existing = historicalDetections.find(h => h.class_name === item.class_name && (now - h.time) < 3500);
+      if (existing) return;
+
+      const record = {
+        class_name: item.class_name,
+        sector: item.sector,
+        distance_ft: item.distance_ft,
+        distance_m: item.distance_m,
+        azimuth_deg: item.azimuth_deg,
+        confidence: item.confidence,
+        time: now,
+        timestampStr: new Date().toLocaleTimeString()
+      };
+
+      historicalDetections.unshift(record);
+      if (historicalDetections.length > 30) historicalDetections.pop();
+
+      renderHistoryCards();
+    }
+
+    function renderHistoryCards() {
+      const container = document.getElementById('detectionHistoryList');
+      if (!container) return;
+
+      if (historicalDetections.length === 0) {
+        container.innerHTML = `<div class="p-4 text-center text-slate-500 text-xs">No objects detected yet. Point your camera at objects.</div>`;
+        return;
+      }
+
+      container.innerHTML = historicalDetections.slice(0, 6).map(item => {
+        const emoji = CLASS_EMOJIS[item.class_name] || '📦';
+        const sectorClean = item.sector.toLowerCase();
+        return `
+          <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition">
+            <div class="flex items-center gap-3">
+              <div class="text-lg">${emoji}</div>
+              <div>
+                <div class="text-xs font-semibold text-white capitalize">${item.class_name}</div>
+                <div class="text-[11px] text-slate-400">${sectorClean} · about ${item.distance_ft} ft</div>
+              </div>
+            </div>
+            <button onclick="setTargetLock('${item.class_name}')" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-sky-500/20 text-sky-400 border border-slate-800 text-[11px] font-medium transition">
+              Focus
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Voice & Query Processor
+    async function triggerVoiceQuery(queryText) {
+      if (!queryText || !queryText.trim()) return;
+      const qDisplay = document.getElementById('userQueryDisplay');
+      if (qDisplay) qDisplay.textContent = `"${queryText}"`;
+
+      try {
+        const res = await fetch('/api/stream/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: queryText })
+        });
+        const data = await res.json();
+
+        const vDisplay = document.getElementById('voiceResponseDisplay');
+        if (vDisplay) vDisplay.textContent = `"${data.speech_text}"`;
+        lastVoiceSpoken = data.speech_text;
+
+        if (data.nlp_info) {
+          const intentEl = document.getElementById('intentDisplay');
+          if (intentEl) {
+            intentEl.textContent = `Intent: ${data.nlp_info.intent}`;
+          }
+        }
+
+        speak(data.speech_text);
+      } catch (err) {
+        console.error('Query error:', err);
+      }
+    }
+
+    function submitCustomSentence() {
+      const input = document.getElementById('customSentenceInput');
+      if (input && input.value.trim()) {
+        triggerVoiceQuery(input.value.trim());
+      }
+    }
+
+    // Live Microphone Recording (Local Whisper STT)
+    let liveMediaRecorder = null;
+    let liveAudioChunks = [];
+    let isLiveRecording = false;
+
+    async function toggleVoiceInput() {
+      const micBtn = document.getElementById('micBtn');
+      const micStatus = document.getElementById('micStatusText');
+
+      if (isLiveRecording) {
+        if (liveMediaRecorder && liveMediaRecorder.state !== 'inactive') {
+          liveMediaRecorder.stop();
+        }
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Microphone recording is not supported in this browser. You can type queries in the search bar!");
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: 16000,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
+        liveAudioChunks = [];
+
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+
+        liveMediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+        liveMediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) liveAudioChunks.push(e.data);
+        };
+
+        liveMediaRecorder.onstart = () => {
+          isLiveRecording = true;
+          if (micStatus) micStatus.textContent = "Listening...";
+          if (micBtn) {
+            micBtn.classList.remove('bg-sky-500/15', 'text-sky-300', 'border-sky-500/30');
+            micBtn.classList.add('bg-rose-500/30', 'text-rose-300', 'border-rose-400', 'animate-pulse');
+          }
+        };
+
+        liveMediaRecorder.onstop = async () => {
+          isLiveRecording = false;
+          stream.getTracks().forEach(t => t.stop());
+          if (micBtn) {
+            micBtn.classList.remove('bg-rose-500/30', 'text-rose-300', 'border-rose-400', 'animate-pulse');
+            micBtn.classList.add('bg-sky-500/15', 'text-sky-300', 'border-sky-500/30');
+          }
+          if (micStatus) micStatus.textContent = "Processing...";
+
+          const audioBlob = new Blob(liveAudioChunks, { type: liveMediaRecorder.mimeType || 'audio/webm' });
+          if (audioBlob.size > 500) {
+            await submitLiveAudioQuery(audioBlob);
+          }
+          if (micStatus) micStatus.textContent = "Speak";
+        };
+
+        liveMediaRecorder.start();
+
+        setTimeout(() => {
+          if (isLiveRecording && liveMediaRecorder && liveMediaRecorder.state === 'recording') {
+            liveMediaRecorder.stop();
+          }
+        }, 7000);
+
+      } catch (err) {
+        console.error("Microphone error:", err);
+        alert("Microphone permission needed: " + err.message);
+        if (micStatus) micStatus.textContent = "Speak";
+      }
+    }
+
+    async function submitLiveAudioQuery(audioBlob) {
+      const formData = new FormData();
+      formData.append('audio_file', audioBlob, 'mic_record.webm');
+
+      try {
+        const res = await fetch('/api/stream/query-audio', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) throw new Error('Voice recognition failed');
+        const data = await res.json();
+
+        const transcribed = data.transcribed_sentence || '';
+        if (transcribed) {
+          const qDisplay = document.getElementById('userQueryDisplay');
+          if (qDisplay) qDisplay.textContent = `"${transcribed}"`;
+          const customIn = document.getElementById('customSentenceInput');
+          if (customIn) customIn.value = transcribed;
+        }
+
+        if (data.speech_text) {
+          const vDisplay = document.getElementById('voiceResponseDisplay');
+          if (vDisplay) vDisplay.textContent = `"${data.speech_text}"`;
+          lastVoiceSpoken = data.speech_text;
+          speak(data.speech_text);
+        }
+      } catch (err) {
+        console.error("Audio query error:", err);
+      }
+    }
+
+    function speak(text, onEnd = null) {
+      if ('speechSynthesis' in window && text) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        let called = false;
+        const finish = () => {
+          if (!called) {
+            called = true;
+            if (onEnd) onEnd();
+          }
+        };
+
+        utterance.onend = finish;
+        utterance.onerror = finish;
+
+        // Fallback safety timer if browser SpeechSynthesis onend does not fire
+        const expectedDurationMs = Math.max(2200, (text.length / 14) * 1000 + 1600);
+        setTimeout(finish, expectedDurationMs);
+
+        window.speechSynthesis.speak(utterance);
+      } else if (onEnd) {
+        onEnd();
+      }
+    }
+
+    // ===========================================================================
+    // INTERACTIVE VOICE ASSISTANT (CONVERSATIONAL HANDS-FREE LOOP)
+    // ===========================================================================
+    let isInteractiveMode = false;
+    let wakeRecognizer = null;
+    let isListeningForWake = false;
+    let interactiveRecorder = null;
+    let interactiveAudioChunks = [];
+    let interactiveStream = null;
+    let interactiveAudioCtx = null;
+    let vadTimer = null;
+    let maxRecordTimer = null;
+    let isRecordingQuestion = false;
+    let interactiveClientHint = '';
+    let interactiveClientRecognizer = null;
+
+    // Update UI badges and controls based on state
+    function updateInteractiveUI(state, text = '') {
+      const toggleBtn = document.getElementById('interactiveToggleBtn');
+      const toggleKnob = document.getElementById('interactiveToggleKnob');
+      const stateBadge = document.getElementById('interactiveStateBadge');
+      const badgeDot = document.getElementById('interactiveBadgeDot');
+      const badgeText = document.getElementById('interactiveBadgeText');
+      const dialogueBox = document.getElementById('interactiveDialogueBox');
+      const glow = document.getElementById('interactiveGlow');
+      const liveStatus = document.getElementById('interactiveLiveStatus');
+      const simulateWakeBtn = document.getElementById('simulateWakeBtn');
+      const interactiveAskBtn = document.getElementById('interactiveAskBtn');
+
+      if (state === 'DISABLED') {
+        if (toggleBtn) {
+          toggleBtn.classList.remove('bg-sky-500');
+          toggleBtn.classList.add('bg-slate-700');
+          toggleBtn.setAttribute('aria-checked', 'false');
+        }
+        if (toggleKnob) {
+          toggleKnob.classList.remove('translate-x-7');
+          toggleKnob.classList.add('translate-x-0');
+        }
+        if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-slate-500';
+        if (badgeText) badgeText.textContent = 'OFF';
+        if (stateBadge) stateBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 font-semibold flex items-center gap-1.5';
+        if (dialogueBox) dialogueBox.classList.add('hidden');
+        if (glow) glow.classList.add('hidden');
+        if (simulateWakeBtn) simulateWakeBtn.disabled = true;
+        if (interactiveAskBtn) interactiveAskBtn.disabled = true;
+        return;
+      }
+
+      // Active states
+      if (toggleBtn) {
+        toggleBtn.classList.remove('bg-slate-700');
+        toggleBtn.classList.add('bg-sky-500');
+        toggleBtn.setAttribute('aria-checked', 'true');
+      }
+      if (toggleKnob) {
+        toggleKnob.classList.remove('translate-x-0');
+        toggleKnob.classList.add('translate-x-7');
+      }
+      if (dialogueBox) dialogueBox.classList.remove('hidden');
+      if (glow) glow.classList.remove('hidden');
+      if (simulateWakeBtn) simulateWakeBtn.disabled = false;
+      if (interactiveAskBtn) interactiveAskBtn.disabled = false;
+
+      switch (state) {
+        case 'WAITING_FOR_WAKE_WORD':
+          if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-sky-400 pulse-dot';
+          if (badgeText) badgeText.textContent = 'WAITING FOR "HI OMII"';
+          if (stateBadge) stateBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-sky-950/80 text-sky-300 border border-sky-500/40 font-semibold flex items-center gap-1.5';
+          if (liveStatus) liveStatus.textContent = 'Listening for "Hi Omii"...';
+          break;
+        case 'ACKNOWLEDGING_WAKE_WORD':
+          if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-indigo-400 pulse-dot';
+          if (badgeText) badgeText.textContent = 'RESPONDING';
+          if (stateBadge) stateBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-500/40 font-semibold flex items-center gap-1.5';
+          if (liveStatus) liveStatus.textContent = 'Acknowledging: "Yes, I\'m listening..."';
+          break;
+        case 'LISTENING_FOR_COMMAND':
+          if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping';
+          if (badgeText) badgeText.textContent = 'LISTENING TO QUESTION...';
+          if (stateBadge) stateBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 font-semibold flex items-center gap-1.5';
+          if (liveStatus) liveStatus.textContent = 'Recording your question (speak now)...';
+          break;
+        case 'TRANSCRIBING':
+          if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400 pulse-dot';
+          if (badgeText) badgeText.textContent = 'TRANSCRIBING (WHISPER AI)';
+          if (stateBadge) stateBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/40 font-semibold flex items-center gap-1.5';
+          if (liveStatus) liveStatus.textContent = 'Transcribing with local Whisper AI...';
+          break;
+        case 'SEARCHING_FOR_OBJECT':
+          if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-purple-400 pulse-dot';
+          if (badgeText) badgeText.textContent = 'LOCATING TARGET (5S MAX)';
+          if (stateBadge) stateBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/40 font-semibold flex items-center gap-1.5';
+          if (liveStatus) liveStatus.textContent = text || 'Scanning camera frame for object...';
+          break;
+        case 'SPEAKING_RESPONSE':
+          if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-sky-400';
+          if (badgeText) badgeText.textContent = 'SPEAKING FEEDBACK';
+          if (stateBadge) stateBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-sky-950/80 text-sky-300 border border-sky-500/40 font-semibold flex items-center gap-1.5';
+          if (liveStatus) liveStatus.textContent = 'Speaking answer...';
+          break;
+        case 'ERROR_RECOVERY':
+          if (badgeDot) badgeDot.className = 'w-1.5 h-1.5 rounded-full bg-rose-400';
+          if (badgeText) badgeText.textContent = 'RECOVERING';
+          if (stateBadge) stateBadge.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-rose-950/80 text-rose-300 border border-rose-500/40 font-semibold flex items-center gap-1.5';
+          if (liveStatus) liveStatus.textContent = text || 'Recovering, please try again...';
+          break;
+        default:
+          if (liveStatus) liveStatus.textContent = text || state;
+      }
+    }
+
+    // Toggle interactive mode ON / OFF
+    async function toggleInteractiveMode() {
+      if (isInteractiveMode) {
+        await stopInteractiveMode();
+      } else {
+        await startInteractiveMode();
+      }
+    }
+
+    async function startInteractiveMode() {
+      try {
+        const res = await fetch('/api/interactive/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enable: true }),
+        });
+        const data = await res.json();
+        isInteractiveMode = true;
+        updateInteractiveUI('WAITING_FOR_WAKE_WORD');
+
+        // Ensure camera stream is running so YOLO can search live frames
+        if (!isStreaming) {
+          toggleWebcamStream();
+        }
+
+        startWakeWordDetection();
+      } catch (err) {
+        console.error('Failed to enable interactive mode:', err);
+        alert('Failed to enable interactive mode: ' + err.message);
+      }
+    }
+
+    async function stopInteractiveMode() {
+      isInteractiveMode = false;
+      stopWakeWordDetection();
+      abortQuestionRecording();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      try {
+        await fetch('/api/interactive/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enable: false }),
+        });
+      } catch (err) {
+        console.warn('Toggle off call:', err);
+      }
+
+      updateInteractiveUI('DISABLED');
+    }
+
+    // Wake-word Spotter for "Hi Omii"
+    function startWakeWordDetection() {
+      if (!isInteractiveMode) return;
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRec) {
+        console.info('SpeechRecognition not supported in this browser. Use "Say Hi Omii" button.');
+        updateInteractiveUI('WAITING_FOR_WAKE_WORD');
+        const liveStatus = document.getElementById('interactiveLiveStatus');
+        if (liveStatus) {
+          liveStatus.innerHTML = 'Ready! Click <span class="text-sky-300 font-bold">Say "Hi Omii"</span> to ask.';
+        }
+        return;
+      }
+
+      if (wakeRecognizer) {
+        try { wakeRecognizer.abort(); } catch (e) {}
+      }
+
+      try {
+        wakeRecognizer = new SpeechRec();
+        wakeRecognizer.continuous = true;
+        wakeRecognizer.interimResults = true;
+        wakeRecognizer.lang = 'en-US';
+
+        wakeRecognizer.onresult = (event) => {
+          if (!isInteractiveMode || isRecordingQuestion) return;
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcript = event.results[i][0].transcript.toLowerCase().trim();
+            const wakeMatch = transcript.match(/(?:hi|hey|hello|ok|okay)?\s*(?:omii|omi|omee)\b\s*[:,\s]*(.*)/i);
+            const wakeDetected = wakeMatch !== null ||
+              transcript.includes('hi omii') ||
+              transcript.includes('hi omi') ||
+              transcript.includes('hey omii') ||
+              transcript.includes('hey omi') ||
+              transcript.includes('hi omee') ||
+              transcript.includes('hey omee') ||
+              transcript.includes('hello omii') ||
+              transcript.includes('hello omi') ||
+              transcript.includes('omii') ||
+              transcript.includes('omi') ||
+              transcript.includes('omee');
+
+            if (wakeDetected) {
+              console.log('[WAKE DETECTED]:', transcript);
+              stopWakeWordDetection();
+
+              let commandAfterWake = '';
+              if (wakeMatch && wakeMatch[1]) {
+                commandAfterWake = wakeMatch[1].trim();
+              } else {
+                commandAfterWake = transcript
+                  .replace(/\b(?:hi|hey|hello|ok|okay)?\s*(?:omii|omi|omee)\b/gi, '')
+                  .trim();
+              }
+              commandAfterWake = commandAfterWake.replace(/^[:,\-—\.]+\s*/, '').trim();
+
+              if (commandAfterWake.length > 0) {
+                // User spoke the target object directly with the wake word in one breath!
+                handleDirectWakeCommand(commandAfterWake, transcript);
+              } else {
+                handleWakeWordTriggered();
+              }
+              break;
+            }
+          }
+        };
+
+        wakeRecognizer.onerror = (event) => {
+          if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            console.warn('Wake recognizer error:', event.error);
+          }
+        };
+
+        wakeRecognizer.onend = () => {
+          if (isInteractiveMode && !isRecordingQuestion && isListeningForWake) {
+            try {
+              wakeRecognizer.start();
+            } catch (e) {}
+          }
+        };
+
+        isListeningForWake = true;
+        wakeRecognizer.start();
+        updateInteractiveUI('WAITING_FOR_WAKE_WORD');
+      } catch (err) {
+        console.warn('Could not start wake recognizer:', err);
+      }
+    }
+
+    function stopWakeWordDetection() {
+      isListeningForWake = false;
+      if (wakeRecognizer) {
+        try {
+          wakeRecognizer.abort();
+        } catch (e) {}
+        wakeRecognizer = null;
+      }
+    }
+
+    // Direct command execution when user says wake word and target in one utterance
+    async function handleDirectWakeCommand(commandText, rawTranscript) {
+      if (!isInteractiveMode) return;
+
+      const queryEl = document.getElementById('interactiveLastQuery');
+      if (queryEl) queryEl.textContent = `"${rawTranscript || commandText}"`;
+
+      const customIn = document.getElementById('customSentenceInput');
+      if (customIn) customIn.value = commandText;
+
+      updateInteractiveUI('EXTRACTING_TARGET');
+
+      try {
+        const res = await fetch('/api/interactive/text-command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: commandText }),
+        });
+
+        if (!res.ok) throw new Error('Interactive processing error: ' + res.statusText);
+        const data = await res.json();
+
+        if (!isInteractiveMode) return;
+
+        // Display spoken response
+        const replyEl = document.getElementById('interactiveLastReply');
+        if (replyEl) replyEl.textContent = `"${data.speech_response}"`;
+
+        const voiceDisplay = document.getElementById('voiceResponseDisplay');
+        if (voiceDisplay) voiceDisplay.textContent = `"${data.speech_response}"`;
+        lastVoiceSpoken = data.speech_response;
+
+        // If target was found, highlight it in camera view
+        if (data.found && data.target_object) {
+          setTargetLock(data.target_object);
+        }
+
+        updateInteractiveUI('SPEAKING_RESPONSE');
+        speak(data.speech_response, () => {
+          returnToWakeListening();
+        });
+
+      } catch (err) {
+        console.error('Direct command failed:', err);
+        handleAudioProcessingError("Sorry, I had trouble processing that. Please try again.");
+      }
+    }
+
+    // User or UI triggers wake word
+    function simulateWakeWord() {
+      if (!isInteractiveMode) return;
+      stopWakeWordDetection();
+      handleWakeWordTriggered();
+    }
+
+    async function handleWakeWordTriggered() {
+      if (!isInteractiveMode) return;
+
+      const ackText = "Yes, I'm listening. Which object should I find?";
+      updateInteractiveUI('ACKNOWLEDGING_WAKE_WORD');
+
+      const replyEl = document.getElementById('interactiveLastReply');
+      if (replyEl) replyEl.textContent = `"${ackText}"`;
+      const queryEl = document.getElementById('interactiveLastQuery');
+      if (queryEl) queryEl.textContent = '"Hi Omii"';
+
+      // Speak acknowledgment and mute mic to avoid self-triggering
+      speak(ackText, () => {
+        if (!isInteractiveMode) return;
+        recordUserQuestionWithVAD();
+      });
+    }
+
+    function triggerInteractiveVoiceQuestion() {
+      if (!isInteractiveMode) return;
+      stopWakeWordDetection();
+      recordUserQuestionWithVAD();
+    }
+
+    // Record User Question with Voice Activity Detection (VAD) / Silence Endpointing
+    async function recordUserQuestionWithVAD() {
+      if (!isInteractiveMode) return;
+      isRecordingQuestion = true;
+      interactiveClientHint = '';
+      updateInteractiveUI('LISTENING_FOR_COMMAND');
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Microphone recording not supported.');
+        returnToWakeListening();
+        return;
+      }
+
+      // Parallel client-side speech recognition for real-time speech hints
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRec) {
+        try {
+          interactiveClientRecognizer = new SpeechRec();
+          interactiveClientRecognizer.continuous = false;
+          interactiveClientRecognizer.interimResults = true;
+          interactiveClientRecognizer.lang = 'en-US';
+          interactiveClientRecognizer.onresult = (e) => {
+            for (let i = e.resultIndex; i < e.results.length; ++i) {
+              const text = e.results[i][0].transcript.trim();
+              if (text) {
+                interactiveClientHint = text;
+                const queryEl = document.getElementById('interactiveLastQuery');
+                if (queryEl) queryEl.textContent = `"${text}"`;
+              }
+            }
+          };
+          interactiveClientRecognizer.start();
+        } catch (e) {}
+      }
+
+      try {
+        interactiveStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: 16000,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
+        interactiveAudioChunks = [];
+
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+
+        interactiveRecorder = mimeType
+          ? new MediaRecorder(interactiveStream, { mimeType, audioBitsPerSecond: 128000 })
+          : new MediaRecorder(interactiveStream);
+
+        interactiveRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) interactiveAudioChunks.push(e.data);
+        };
+
+        // AudioContext for VAD volume & silence endpointing
+        interactiveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = interactiveAudioCtx.createMediaStreamSource(interactiveStream);
+        const analyser = interactiveAudioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        let speechDetected = false;
+        let silenceStart = null;
+        const silenceTimeoutMs = 1000; // 1.0s silence threshold after speech
+        const startTime = Date.now();
+
+        vadTimer = setInterval(() => {
+          if (!isRecordingQuestion) {
+            clearInterval(vadTimer);
+            return;
+          }
+
+          analyser.getByteFrequencyData(dataArray);
+
+          // Focus energy detection on human vocal frequencies (100Hz - 3500Hz)
+          const sampleRate = (interactiveAudioCtx && interactiveAudioCtx.sampleRate) ? interactiveAudioCtx.sampleRate : 44100;
+          const binWidth = sampleRate / analyser.fftSize;
+          const minBin = Math.max(1, Math.floor(100 / binWidth));
+          const maxBin = Math.min(bufferLength - 1, Math.ceil(3500 / binWidth));
+
+          let voiceSum = 0;
+          for (let i = minBin; i <= maxBin; i++) {
+            voiceSum += dataArray[i];
+          }
+          const avgVoiceVolume = voiceSum / (maxBin - minBin + 1);
+
+          if (avgVoiceVolume > 13) {
+            speechDetected = true;
+            silenceStart = null;
+          } else if (speechDetected) {
+            if (!silenceStart) {
+              silenceStart = Date.now();
+            } else if (Date.now() - silenceStart > silenceTimeoutMs) {
+              clearInterval(vadTimer);
+              if (interactiveRecorder && interactiveRecorder.state === 'recording') {
+                interactiveRecorder.stop();
+              }
+            }
+          }
+        }, 50);
+
+        // Maximum recording duration safety timer: 7 seconds
+        maxRecordTimer = setTimeout(() => {
+          if (isRecordingQuestion && interactiveRecorder && interactiveRecorder.state === 'recording') {
+            clearInterval(vadTimer);
+            interactiveRecorder.stop();
+          }
+        }, 7000);
+
+        interactiveRecorder.onstop = async () => {
+          isRecordingQuestion = false;
+          clearInterval(vadTimer);
+          clearTimeout(maxRecordTimer);
+
+          if (interactiveClientRecognizer) {
+            try { interactiveClientRecognizer.abort(); } catch (e) {}
+            interactiveClientRecognizer = null;
+          }
+
+          if (interactiveStream) {
+            interactiveStream.getTracks().forEach(t => t.stop());
+          }
+          if (interactiveAudioCtx && interactiveAudioCtx.state !== 'closed') {
+            try { interactiveAudioCtx.close(); } catch (e) {}
+          }
+
+          if (!isInteractiveMode) return;
+
+          const audioBlob = new Blob(interactiveAudioChunks, {
+            type: interactiveRecorder.mimeType || 'audio/webm',
+          });
+
+          if (audioBlob.size > 800 || (interactiveClientHint && interactiveClientHint.trim())) {
+            await processInteractiveAudio(audioBlob, interactiveClientHint);
+          } else {
+            handleAudioProcessingError("Sorry, I couldn't hear any speech. Please try again.");
+          }
+        };
+
+        interactiveRecorder.start();
+
+      } catch (err) {
+        console.error('Failed to start question recording:', err);
+        isRecordingQuestion = false;
+        returnToWakeListening();
+      }
+    }
+
+    function abortQuestionRecording() {
+      isRecordingQuestion = false;
+      if (interactiveClientRecognizer) {
+        try { interactiveClientRecognizer.abort(); } catch (e) {}
+        interactiveClientRecognizer = null;
+      }
+      if (vadTimer) clearInterval(vadTimer);
+      if (maxRecordTimer) clearTimeout(maxRecordTimer);
+      if (interactiveRecorder && interactiveRecorder.state !== 'inactive') {
+        try { interactiveRecorder.stop(); } catch (e) {}
+      }
+      if (interactiveStream) {
+        try { interactiveStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+      }
+      if (interactiveAudioCtx && interactiveAudioCtx.state !== 'closed') {
+        try { interactiveAudioCtx.close(); } catch (e) {}
+      }
+    }
+
+    // Send recorded audio to backend for Whisper STT + 5s YOLO search
+    async function processInteractiveAudio(audioBlob, hintText) {
+      if (!isInteractiveMode) return;
+
+      updateInteractiveUI('TRANSCRIBING');
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'question.webm');
+      if (hintText && hintText.trim()) {
+        formData.append('hint_text', hintText.trim());
+      }
+
+      try {
+        const res = await fetch('/api/interactive/process-audio', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) throw new Error('Interactive processing error: ' + res.statusText);
+        const data = await res.json();
+
+        if (!isInteractiveMode) return;
+
+        // Display transcription
+        const queryEl = document.getElementById('interactiveLastQuery');
+        if (queryEl) queryEl.textContent = `"${data.transcribed_text || '...'}"`;
+
+        const customIn = document.getElementById('customSentenceInput');
+        if (customIn && data.transcribed_text) customIn.value = data.transcribed_text;
+
+        // Display spoken response
+        const replyEl = document.getElementById('interactiveLastReply');
+        if (replyEl) replyEl.textContent = `"${data.speech_response}"`;
+
+        const voiceDisplay = document.getElementById('voiceResponseDisplay');
+        if (voiceDisplay) voiceDisplay.textContent = `"${data.speech_response}"`;
+        lastVoiceSpoken = data.speech_response;
+
+        // If target was found, highlight it in camera view
+        if (data.found && data.target_object) {
+          setTargetLock(data.target_object);
+        }
+
+        updateInteractiveUI('SPEAKING_RESPONSE');
+        speak(data.speech_response, () => {
+          returnToWakeListening();
+        });
+
+      } catch (err) {
+        console.error('Audio processing failed:', err);
+        handleAudioProcessingError("Sorry, I had trouble processing that. Please try again.");
+      }
+    }
+
+    function handleAudioProcessingError(message) {
+      if (!isInteractiveMode) return;
+      updateInteractiveUI('ERROR_RECOVERY', message);
+      const replyEl = document.getElementById('interactiveLastReply');
+      if (replyEl) replyEl.textContent = `"${message}"`;
+      speak(message, () => {
+        returnToWakeListening();
+      });
+    }
+
+    function returnToWakeListening() {
+      if (!isInteractiveMode) return;
+      updateInteractiveUI('WAITING_FOR_WAKE_WORD');
+      startWakeWordDetection();
+    }
+
+
+    function replayVoice() {
+      speak(lastVoiceSpoken);
+    }
+
+    function toggleFullscreen() {
+      const el = document.getElementById('liveStreamImg');
+      if (el && el.requestFullscreen) {
+        el.requestFullscreen();
+      }
+    }
+
+    // Static File Upload Handling
+    const staticFileInput = document.getElementById('staticFileInput');
+    const staticFileName = document.getElementById('staticFileName');
+    if (staticFileInput) {
+      staticFileInput.addEventListener('change', (e) => {
+        if (staticFileInput.files.length > 0 && staticFileName) {
+          staticFileName.textContent = staticFileInput.files[0].name;
+        }
+      });
+    }
+
+    async function runFileUploadDetection() {
+      if (!staticFileInput.files || staticFileInput.files.length === 0) {
+        alert("Please select a photo or video first.");
+        return;
+      }
+
+      const file = staticFileInput.files[0];
+      const isVideo = file.type.startsWith('video');
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const spinner = document.getElementById('staticSpinner');
+      const placeholder = document.getElementById('staticPlaceholder');
+      const img = document.getElementById('staticResultImg');
+      const vid = document.getElementById('staticResultVideo');
+      const chips = document.getElementById('uploadDetectionChips');
+
+      if (spinner) spinner.classList.remove('hidden');
+      if (placeholder) placeholder.classList.add('hidden');
+      if (img) img.classList.add('hidden');
+      if (vid) vid.classList.add('hidden');
+
+      try {
+        const endpoint = isVideo ? `/api/detection/video?conf=${currentConf}` : `/api/detection/image?conf=${currentConf}`;
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) throw new Error("Processing failed");
+        const data = await res.json();
+
+        if (isVideo) {
+          if (vid) {
+            vid.src = `${data.video_url}?t=${Date.now()}`;
+            vid.classList.remove('hidden');
+          }
+        } else {
+          if (img) {
+            img.src = `${data.annotated_image_url}?t=${Date.now()}`;
+            img.classList.remove('hidden');
+          }
+
+          if (chips) {
+            chips.innerHTML = '';
+            (data.detections || []).forEach(d => {
+              const badge = document.createElement('span');
+              badge.className = "text-xs px-2.5 py-1 rounded-lg bg-slate-900 text-sky-300 border border-slate-800 capitalize";
+              badge.textContent = `${d.class_name} (${(d.confidence * 100).toFixed(0)}%)`;
+              chips.appendChild(badge);
+            });
+          }
+        }
+      } catch (err) {
+        alert(err.message);
+        if (placeholder) placeholder.classList.remove('hidden');
+      } finally {
+        if (spinner) spinner.classList.add('hidden');
+      }
+    }
+
+    // ========================================================
+    // NLP Objects Explorer & 80 COCO Classes
+    // ========================================================
+    let allCocoClasses = [];
+
+    function setNlpPreset(sentence) {
+      const input = document.getElementById('nlpTestInput');
+      if (input) {
+        input.value = sentence;
+        runNlpTest();
+      }
+    }
+
+    async function runNlpTest() {
+      const input = document.getElementById('nlpTestInput');
+      if (!input || !input.value.trim()) return;
+
+      const sentence = input.value.trim();
+      try {
+        const res = await fetch('/api/nlp/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sentence: sentence })
+        });
+        if (!res.ok) throw new Error('NLP extraction failed');
+        const data = await res.json();
+        renderNlpResults(data);
+      } catch (err) {
+        console.error('NLP Error:', err);
+      }
+    }
+
+    function renderNlpResults(data) {
+      const intentBadge = document.getElementById('nlpIntentBadge');
+      if (intentBadge) intentBadge.textContent = data.intent.toUpperCase();
+
+      const targetChipsContainer = document.getElementById('nlpTargetChips');
+      if (targetChipsContainer) {
+        if (data.target_classes.length === 0) {
+          targetChipsContainer.innerHTML = '<span class="text-slate-500 text-xs">No target objects found in sentence</span>';
+        } else {
+          targetChipsContainer.innerHTML = data.target_classes.map((clsName, idx) => {
+            return `
+              <div class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-semibold capitalize">
+                <span>${clsName}</span>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      const excludedContainer = document.getElementById('nlpExcludedContainer');
+      const excludedChips = document.getElementById('nlpExcludedChips');
+      if (excludedContainer && excludedChips) {
+        if (data.excluded_classes && data.excluded_classes.length > 0) {
+          excludedContainer.classList.remove('hidden');
+          excludedChips.innerHTML = data.excluded_classes.map(c => `
+            <div class="px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800 text-rose-300 text-xs">
+              <span class="line-through">${c}</span>
+            </div>
+          `).join('');
+        } else {
+          excludedContainer.classList.add('hidden');
+        }
+      }
+
+      // Entities Table
+      const tableBody = document.getElementById('nlpEntitiesTableBody');
+      if (tableBody) {
+        if (data.extracted_objects.length === 0) {
+          tableBody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500">No objects identified</td></tr>`;
+        } else {
+          tableBody.innerHTML = data.extracted_objects.map(obj => {
+            const countStr = obj.count !== null ? obj.count : '1';
+            const attrsStr = obj.attributes && obj.attributes.length > 0 ? obj.attributes.join(', ') : '-';
+            const statusBadge = obj.negated
+              ? '<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]">Excluded</span>'
+              : '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">Active</span>';
+
+            return `
+              <tr class="hover:bg-slate-900/40 transition">
+                <td class="py-2 px-3 font-semibold text-white capitalize">${obj.class_name}</td>
+                <td class="py-2 px-3 text-slate-300">"${obj.matched_phrase}"</td>
+                <td class="py-2 px-3 text-sky-400">${countStr}</td>
+                <td class="py-2 px-3 text-slate-400">${attrsStr}</td>
+                <td class="py-2 px-3">${statusBadge}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    async function loadSupportedClasses() {
+      try {
+        const res = await fetch('/api/nlp/classes');
+        const data = await res.json();
+        allCocoClasses = data.classes || [];
+        const countDisplay = document.getElementById('classesCountDisplay');
+        if (countDisplay) countDisplay.textContent = `${allCocoClasses.length} objects`;
+        renderClassesList(allCocoClasses);
+      } catch (err) {
+        console.error('Failed to load classes:', err);
+      }
+    }
+
+    function renderClassesList(classes) {
+      const container = document.getElementById('cocoClassesList');
+      if (!container) return;
+
+      container.innerHTML = classes.map(c => `
+        <div onclick="setNlpPreset('Where is the ${c.class_name}?')"
+          class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-sky-500/40 cursor-pointer transition flex items-center justify-between group">
+          <div>
+            <div class="text-xs font-semibold text-white capitalize group-hover:text-sky-300 transition">${c.class_name}</div>
+            <div class="text-[11px] text-slate-500 truncate max-w-[200px]">
+              ${c.aliases.length > 0 ? c.aliases.slice(0, 3).join(', ') : 'standard'}
+            </div>
+          </div>
+          <span class="text-xs text-slate-500 group-hover:text-sky-400 transition">Test →</span>
+        </div>
+      `).join('');
+    }
+
+    function filterClassesGrid() {
+      const q = (document.getElementById('classFilterInput')?.value || '').toLowerCase().trim();
+      if (!q) {
+        renderClassesList(allCocoClasses);
+        return;
+      }
+      const filtered = allCocoClasses.filter(c => {
+        if (c.class_name.toLowerCase().includes(q)) return true;
+        return c.aliases.some(a => a.toLowerCase().includes(q));
+      });
+      renderClassesList(filtered);
+    }
+
+    // Audio File upload for NLP
+    async function uploadAudioForNlp() {
+      const fileInput = document.getElementById('sttAudioFileInput');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Please choose an audio file first.");
+        return;
+      }
+
+      const btn = document.getElementById('uploadAudioBtn');
+      const origText = btn ? btn.innerHTML : '';
+      if (btn) btn.innerHTML = 'Transcribing...';
+
+      const formData = new FormData();
+      formData.append('audio_file', fileInput.files[0]);
+
+      try {
+        const res = await fetch('/api/nlp/transcribe-and-extract', {
+          method: 'POST',
+          body: formData
+        });
+        if (!res.ok) throw new Error('Audio transcription failed');
+        const data = await res.json();
+
+        const input = document.getElementById('nlpTestInput');
+        if (input) input.value = data.transcribed_sentence;
+        renderNlpResults(data.nlp_result);
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        if (btn) btn.innerHTML = origText;
+      }
+    }
+
+    let nlpMediaRecorder = null;
+    let nlpAudioChunks = [];
+    let isNlpRecording = false;
+
+    async function toggleNlpVoiceRecord() {
+      const btn = document.getElementById('nlpRecordBtn');
+      const text = document.getElementById('nlpRecordBtnText');
+
+      if (isNlpRecording) {
+        if (nlpMediaRecorder && nlpMediaRecorder.state !== 'inactive') {
+          nlpMediaRecorder.stop();
+        }
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Microphone not supported in this browser.");
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        nlpAudioChunks = [];
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+
+        nlpMediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+        nlpMediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) nlpAudioChunks.push(e.data);
+        };
+
+        nlpMediaRecorder.onstart = () => {
+          isNlpRecording = true;
+          if (text) text.textContent = "Listening...";
+          if (btn) btn.classList.add('bg-rose-500/20', 'text-rose-300', 'border-rose-400');
+        };
+
+        nlpMediaRecorder.onstop = async () => {
+          isNlpRecording = false;
+          stream.getTracks().forEach(t => t.stop());
+          if (btn) btn.classList.remove('bg-rose-500/20', 'text-rose-300', 'border-rose-400');
+          if (text) text.textContent = "Processing...";
+
+          const audioBlob = new Blob(nlpAudioChunks, { type: nlpMediaRecorder.mimeType || 'audio/webm' });
+          if (audioBlob.size > 500) {
+            const formData = new FormData();
+            formData.append('audio_file', audioBlob, 'nlp_speech.webm');
+            try {
+              const res = await fetch('/api/nlp/transcribe-and-extract', {
+                method: 'POST',
+                body: formData,
+              });
+              if (!res.ok) throw new Error('Transcription failed');
+              const data = await res.json();
+              document.getElementById('nlpTestInput').value = data.transcribed_sentence;
+              renderNlpResults(data.nlp_result);
+            } catch (err) {
+              alert("Whisper error: " + err.message);
+            }
+          }
+          if (text) text.textContent = "Speak";
+        };
+
+        nlpMediaRecorder.start();
+        setTimeout(() => {
+          if (isNlpRecording && nlpMediaRecorder && nlpMediaRecorder.state === 'recording') {
+            nlpMediaRecorder.stop();
+          }
+        }, 7000);
+      } catch (err) {
+        alert("Microphone error: " + err.message);
+      }
+    }
+
+    // Initialize on Page Load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSupportedClasses();
+      runNlpTest();
+    });
+  </script>
+</body>
+</html>

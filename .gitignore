@@ -1,0 +1,32 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+*/.venv/
+
+# Python Cache & Bytecode
+__pycache__/
+*/__pycache__/
+*.py[cod]
+*$py.class
+
+# Ultralytics Config & Cache
+.ultralytics/
+*/.ultralytics/
+
+# Large Model Weights (>100MB exceeds GitHub push limit; auto-downloaded on first run)
+yolo_local/models/*.pt
+yolo_local/models/whisper/*.pt
+models/*.pt
+models/whisper/*.pt
+
+# Output directories (generated annotated images & videos)
+yolo_local/outputs/annotated_*
+yolo_local/outputs/nlp_*
+outputs/
+
+# OS Specific
+.DS_Store
+.DS_Store?
+._*

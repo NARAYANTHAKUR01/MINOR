@@ -1,0 +1,10 @@
+ultralytics
+opencv-python
+torch
+torchvision
+numpy
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+openai-whisper

@@ -1,0 +1,24 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.tmp
+
+# Ultralytics config cache
+.ultralytics/
+
+# Outputs (optional, can keep or ignore)
+outputs/*.jpg
+outputs/*.png
+outputs/*.mp4
+
+# Models (weights are downloaded once)
+# models/*.pt
+
+# OS specific
+.DS_Store
